@@ -2,7 +2,7 @@
 #include <tlsw.h>
 int main()
 {
-    tlsw::Server ourserver;
-    ourserver.setPort(100);
+    tlsw::Server ourserver(100);
+    std::cout << ourserver << std::endl;
     return 0;
 }

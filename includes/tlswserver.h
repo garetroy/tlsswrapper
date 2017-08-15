@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <unistd.h>
+#include <fstream>
 #include <string>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -16,16 +17,21 @@ namespace tlsw{
         public:
             Server(void);
             Server(int);  //needs: Own debug streams, mutexlock for streams
-            ~Server(void); //needs: sslcleanup
+            Server(const Server&);            
+            ~Server(void);
 
             //Basic setup needs
             Server* clone(void) const; 
             Server& operator=(const Server&);
-            //needs Comparator ==
-            //needs ostream overload <<
+            bool    operator==(const Server&) const;
+            bool    operator!=(const Server&) const;
+
+            //To ostream
+            friend std::ostream& operator<<(std::ostream&,
+                        const Server&);
 
             //Helper functions
-            void createSocket(int); 
+            void createSocket(); 
             void initSSL(void);
             void createContext(void); 
             void configureContext(void);
@@ -50,6 +56,7 @@ namespace tlsw{
         private:
             int          sock;
             int          port;
+            int          numConnections;
             bool         update;
             bool         sslinit;
             bool         setup;
