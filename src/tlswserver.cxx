@@ -11,19 +11,19 @@ namespace tlsw{
     Server::Server(void) : port(0), update(false),
         sock(0), setup(false), certificate(""), 
         privatekey(""), ctx(nullptr), sslinit(false),
-        numConnections(0), configured(false)
+        numConnections(0), configured(false), privatecert("")
     {}
     
     Server::Server(int port) : port(port), update(false),
         sock(0), setup(false), certificate(""), 
         privatekey(""), ctx(nullptr), sslinit(false),
-        numConnections(0),configured(false)
+        numConnections(0),configured(false), privatecert("")
     {}
     
     Server::Server(const Server& s) : port(s.port), update(s.update),
         sock(s.sock), setup(false), certificate(s.certificate),
         privatekey(s.privatekey), ctx(nullptr), sslinit(false),
-        numConnections(0), configured(false)
+        numConnections(0), configured(false), privatecert("")
     {}
 
     Server::~Server(void)
@@ -79,6 +79,7 @@ namespace tlsw{
         setup          = false;
         certificate    = rhs.certificate;
         privatekey     = rhs.privatekey;
+        privatecert    = rhs.privatecert;
         ctx            = nullptr;
         numConnections = 0;
         
@@ -108,7 +109,7 @@ namespace tlsw{
         same = (sock == s.sock) && (port == s.port);
         same = same && (update == s.update) && (sslinit == s.sslinit);
         same = same && (setup == s.setup) && (certificate == s.certificate);
-        same = same && (privatekey == s.privatekey);
+        same = same && (privatekey == s.privatekey) && (privatecert == s.privatecert);
 
         return same;
     }
@@ -154,6 +155,7 @@ namespace tlsw{
         stream << " setup(" << s.setup << ")";
         stream << " certificatePath(" << s.certificate;
         stream << ") privateKeyPath(" << s.privatekey << ")";
+        stream << " privateCertPath(" << s.privatecert << ")";
         return stream;
     }
 
@@ -267,9 +269,15 @@ namespace tlsw{
             exit(EXIT_FAILURE);
         }
 
+        std::ifstream privcert(privatecert);
+        if(!privcert){
+            std::cerr << "PrivateCert path invalid" << std::endl; 
+            exit(EXIT_FAILURE);
+        }
+
         SSL_CTX_set_ecdh_auto(ctx,1);
     
-        if(SSL_CTX_use_certificate_file(ctx,certificate.c_str(),SSL_FILETYPE_PEM) <= 0){
+        if(SSL_CTX_use_certificate_file(ctx,privatecert.c_str(),SSL_FILETYPE_PEM) <= 0){
             ERR_print_errors_fp(stderr);
             exit(EXIT_FAILURE);
         }
@@ -278,6 +286,15 @@ namespace tlsw{
             ERR_print_errors_fp(stderr);
             exit(EXIT_FAILURE);
         }
+
+        //Preparing to verify peer
+        if(!SSL_CTX_load_verify_locations(ctx, certificate.c_str(), NULL))
+        {
+            ERR_print_errors_fp(stderr);
+            exit(EXIT_FAILURE);      
+        }
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+        SSL_CTX_set_verify_depth(ctx, 1);
 
         configured = true;
 
@@ -296,6 +313,38 @@ namespace tlsw{
         configureContext();
         createSocket();
     }
+
+    bool
+    Server::verifyPeer(SSL* ssl)
+    {
+        /*
+            This function verifies the ssl connections certificates
+            and returns true if verified.
+
+            @param:
+                ssl - (SSL*) the ssl session.
+                
+            @returns:
+                bool - True if successfully verified, false otherwise
+        */
+        bool success = true;
+        
+        X509 *sslcert = nullptr;
+        sslcert = SSL_get_peer_certificate(ssl);
+        if(sslcert){
+            long verifyresult = SSL_get_verify_result(ssl);
+            if(verifyresult != X509_V_OK){
+                std::cerr << "Certificate Verify Failed\n"; 
+                success = false;
+            }
+            X509_free(sslcert);             
+        }else{
+            std::cerr << "There is no client certificate\n";
+            success = false;
+        }
+        return success;
+    }
+    
 
     //Needs send file
     //Needs hashmap (message/function), loading included
@@ -334,9 +383,12 @@ namespace tlsw{
             SSL_set_fd(ssl, client);
             if(SSL_accept(ssl) <= 0){
                 ERR_print_errors_fp(stderr);
-            } else {
-                SSL_write(ssl,"hello",strlen("hello"));
             }
+            
+            if(!verifyPeer(ssl))
+                std::cerr << "Verifying failed\n";
+
+            SSL_write(ssl,"hello",strlen("hello"));
             SSL_free(ssl);
             close(client);
         }
@@ -387,6 +439,12 @@ namespace tlsw{
         privatekey = path;
     }
 
+    void
+    Server::setPrivateCertPath(std::string path)
+    {
+        privatecert = path;
+    }
+
     int
     Server::getSock(void)
     {
@@ -421,5 +479,11 @@ namespace tlsw{
     Server::getPrivateKeyPath(void)
     {
         return privatekey;
+    }
+
+    std::string
+    Server::getPrivateCertPath(void)
+    {
+        return privatecert;
     }
 }

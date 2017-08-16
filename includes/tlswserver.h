@@ -49,6 +49,7 @@ namespace tlsw{
             void configureContext(void);
             void checkUpdate(void);
             void defaultSetup(void);
+            bool verifyPeer(SSL*);
             void startServer(void);
 
             //Getters & Setters
@@ -57,12 +58,14 @@ namespace tlsw{
             void        setUpdate(bool);
             void        setCertificatePath(std::string);
             void        setPrivateKeyPath(std::string);
+            void        setPrivateCertPath(std::string);
             int         getSock(void);
             int         getPort(void);
             bool        isUpdate(void);
             bool        isSetup(void);
             std::string getCertificatePath(void);
             std::string getPrivateKeyPath(void);
+            std::string getPrivateCertPath(void);
 
         private:
             int          sock;
@@ -74,6 +77,7 @@ namespace tlsw{
             bool         setup;
             std::string  certificate; //required
             std::string  privatekey; //required
+            std::string  privatecert;//required
             SSL_CTX      *ctx;
     };
 }
