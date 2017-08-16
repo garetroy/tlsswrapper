@@ -77,6 +77,7 @@ namespace tlsw{
         update         = rhs.update;
         sslinit        = false;
         setup          = false;
+        configured     = false;
         certificate    = rhs.certificate;
         privatekey     = rhs.privatekey;
         privatecert    = rhs.privatecert;

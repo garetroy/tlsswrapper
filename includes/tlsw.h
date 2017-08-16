@@ -2,5 +2,6 @@
 #define _TLSW_H_
 
 #include <tlswserver.h>
+#include <tlswclient.h>
 
 #endif
