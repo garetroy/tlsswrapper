@@ -43,7 +43,7 @@ namespace tlsw{
                         const Server&);
 
             //Helper functions
-            void createSocket(); 
+            void createSocket(void); 
             void initSSL(void);
             void createContext(void); 
             void configureContext(void);
@@ -59,7 +59,6 @@ namespace tlsw{
             void        setPrivateKeyPath(std::string);
             int         getSock(void);
             int         getPort(void);
-            bool        isSSLInit(void);
             bool        isUpdate(void);
             bool        isSetup(void);
             std::string getCertificatePath(void);
@@ -71,6 +70,7 @@ namespace tlsw{
             int          numConnections;
             bool         update;
             bool         sslinit;
+            bool         configured;
             bool         setup;
             std::string  certificate; //required
             std::string  privatekey; //required

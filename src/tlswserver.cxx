@@ -11,19 +11,19 @@ namespace tlsw{
     Server::Server(void) : port(0), update(false),
         sock(0), setup(false), certificate(""), 
         privatekey(""), ctx(nullptr), sslinit(false),
-        numConnections(0)
+        numConnections(0), configured(false)
     {}
     
     Server::Server(int port) : port(port), update(false),
         sock(0), setup(false), certificate(""), 
         privatekey(""), ctx(nullptr), sslinit(false),
-        numConnections(0)
+        numConnections(0),configured(false)
     {}
     
     Server::Server(const Server& s) : port(s.port), update(s.update),
         sock(s.sock), setup(false), certificate(s.certificate),
         privatekey(s.privatekey), ctx(nullptr), sslinit(false),
-        numConnections(0)
+        numConnections(0), configured(false)
     {}
 
     Server::~Server(void)
@@ -163,6 +163,12 @@ namespace tlsw{
         /*
             Creates the main socket
         */
+
+        if(!configured){
+            createContext();
+            configureContext();
+        }
+            
         struct sockaddr_in addr;
         addr.sin_family      = AF_INET;
         addr.sin_port        = htons(port);
@@ -184,6 +190,8 @@ namespace tlsw{
             perror("Could not listen tlswserver");
             exit(EXIT_FAILURE);
         }
+        
+        setup = true;
     }
 
     void
@@ -270,6 +278,9 @@ namespace tlsw{
             ERR_print_errors_fp(stderr);
             exit(EXIT_FAILURE);
         }
+
+        configured = true;
+
     }
 
     void 
@@ -286,9 +297,6 @@ namespace tlsw{
         createSocket();
     }
 
-    //Need to check setup and set variable
-    //(check sock port != 0, maybe add configure bool and do
-    // check within createSocket();
     //Needs send file
     //Needs hashmap (message/function), loading included
     //Needs versioning checking method
@@ -302,8 +310,12 @@ namespace tlsw{
             will then make a thread per new connection,
             calling the runClient function for each client
             session.
+        
+            Defualts to defaultSetup() if setup is not true 
+            when calling startServer.
         */
-        //Needs to check variables have been set
+        if(setup != true)
+            defaultSetup();
         //Needs to be threaded for multiple clients
         //updating the numConnections (need mutex lock)
         while(1){
@@ -387,12 +399,6 @@ namespace tlsw{
         return port;
     }
     
-    bool
-    Server::isSSLInit(void)
-    {
-        return sslinit;
-    }
-
     bool
     Server::isUpdate(void)
     {
