@@ -1,5 +1,12 @@
 #include <tlswclient.h>
 
+//Needs comments
+//Needs Updates
+//Needs Versioning (version within class)
+//Needs filegetting
+//Needs Recv/Send wrapper
+//Needs Helperfunctions (will add)
+
 namespace tlsw{
     
     Client::Client(void) : port(0), sock(0), update(0), sslinit(false),
@@ -343,4 +350,3 @@ namespace tlsw{
         return privatecert;
     }
 }
-
