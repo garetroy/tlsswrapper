@@ -1,3 +1,15 @@
+/*
+    tlswserver.h
+    This is the header file for the tlswrapper.
+    Author:
+        Garett Roberts
+
+    This is a wrapper for a TCP/TLS server (originall written in c) that will provide basic functionality/deployment of a TCP/TLS server without much hassle and using c++. There are a few options when setting up the server, which will be explained in the docs, or the individual functions will also be explained in the source file.
+
+    IMPORTANT:
+        All elemnts that are marked required must be set before
+        attempting to run the server.
+*/
 #ifndef _TLSWSERVER_H_
 #define _TLSWSERVER_H_
 
@@ -20,7 +32,7 @@ namespace tlsw{
             Server(const Server&);            
             ~Server(void);
 
-            //Basic setup needs
+            //Operators and Cloning
             Server* clone(void) const; 
             Server& operator=(const Server&);
             bool    operator==(const Server&) const;
@@ -55,13 +67,13 @@ namespace tlsw{
 
         private:
             int          sock;
-            int          port;
+            int          port; //required
             int          numConnections;
             bool         update;
             bool         sslinit;
             bool         setup;
-            std::string  certificate;
-            std::string  privatekey;
+            std::string  certificate; //required
+            std::string  privatekey; //required
             SSL_CTX      *ctx;
     };
 }

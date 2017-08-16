@@ -1,3 +1,9 @@
+/*
+    tlswserver.cxx
+    The source file for tlswserver
+    Author:
+        Garett Roberts
+*/
 #include <tlswserver.h>
 
 namespace tlsw{
@@ -22,19 +28,47 @@ namespace tlsw{
 
     Server::~Server(void)
     {
+        //Checks to see if ctx is declared
         if(ctx != nullptr)
             SSL_CTX_free(ctx);
 
+        //Cleanup
         EVP_cleanup();
+
+        //Closes socket
+        if(setup)
+            close(sock);
     }
     
     Server*
     Server::clone(void) const
-    {return new Server(*this);}
+    {
+    /* 
+        This function clones the server object
+        
+        @returns:
+            Server*
+    */
+        return new Server(*this);
+    }
     
     Server&
     Server::operator=(const Server& rhs)
     {
+    /*
+        This function sets a server we are assigning
+        with the constants from the Server object
+        on the right side of the assignment operator.
+        This does not save init or setup variables and
+        still requires you to run setup.
+
+        @param:
+            rhs - (Server&) The server object to the right
+                    of the = operator
+        
+        @returns:
+            Server&
+    */
         if(this == &rhs)
             return *this;
         
@@ -54,6 +88,18 @@ namespace tlsw{
     bool
     Server::operator==(const Server& s) const
     {
+        /*
+            Compares by checking type, socket, ports, setups vars,
+            init vars, and cert/key directories
+        
+            @param:
+                s - (Server&) The server object to compare on the 
+                    right side of the == operator
+
+            @returns:
+                bool - True if same 
+                       False if not
+        */
         if(typeid(*this) != typeid(s))
             return false;
         
@@ -70,12 +116,38 @@ namespace tlsw{
     bool
     Server::operator!=(const Server& s) const
     {
+        /*
+            Uses the == operator to find !=
+
+            @param:
+                s - (Server&) Server object on the right of the
+                    != operator
+            
+            @returns:
+                bool - True if not the same
+                       False if same
+        */
+             
         return !(*this == s);
     }
 
     std::ostream& operator<<(std::ostream& stream,
                 const Server& s)
     {
+        /*
+            Overloading the << operator to be able to print
+            this object with useful information.
+            
+            @param:
+                stream - (std::ostream&) the stream we want to
+                    put our text into
+                s      - (Server&) The server object we want to
+                    print
+            
+            @returns:
+                std::ostream& - The stream that we inputted into
+        */
+
         stream << "The Server's port(" << s.port << ")";
         stream << " has " << s.numConnections << " connections";
         stream << " and updates(" << s.update << ")";
@@ -88,11 +160,15 @@ namespace tlsw{
     void
     Server::createSocket()
     {
+        /*
+            Creates the main socket
+        */
         struct sockaddr_in addr;
         addr.sin_family      = AF_INET;
         addr.sin_port        = htons(port);
         addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
+        //TCP
         sock = socket(AF_INET,SOCK_STREAM,0);
         if(sock < 0){
             perror("Cannot create socket tlswserver");
@@ -103,11 +179,21 @@ namespace tlsw{
             perror("Could not bind tlswserver");
             exit(EXIT_FAILURE);
         }
+
+        if(listen(sock,SOMAXCONN)){
+            perror("Could not listen tlswserver");
+            exit(EXIT_FAILURE);
+        }
     }
 
     void
     Server::initSSL(void)
     {
+        /*
+            Initializes the OpenSSL library
+            in preperation for TCP/TLS connections
+        */
+
         //Check to see if already init
         if(sslinit)
             return;
@@ -121,6 +207,11 @@ namespace tlsw{
     void 
     Server::createContext(void)
     {
+        /*
+            Creates the context for a secure
+            TCP/TLS connection
+        */
+
         if(!sslinit)
             initSSL();
 
@@ -142,6 +233,12 @@ namespace tlsw{
     void 
     Server::configureContext(void)
     {
+        /*
+            Configures the context for the TCP/TLS connection.
+            This also checks to see if the cert/key paths are
+            valid.
+        */
+
         if(!sslinit)
             initSSL();
 
@@ -178,6 +275,11 @@ namespace tlsw{
     void 
     Server::defaultSetup(void)
     {
+        /*
+            This method is to be invoked if all required objects
+            are loaded up and you don't have anything in paticular
+            you want to setup
+        */
         initSSL();
         createContext();
         configureContext();
@@ -187,10 +289,20 @@ namespace tlsw{
     //Need to check setup and set variable
     //(check sock port != 0, maybe add configure bool and do
     // check within createSocket();
+    //Needs send file
+    //Needs hashmap (message/function), loading included
+    //Needs versioning checking method
  
     void
     Server::startServer(void)
     {
+        /*
+            This is the actual server part.
+            The server will listen for new connections and
+            will then make a thread per new connection,
+            calling the runClient function for each client
+            session.
+        */
         //Needs to check variables have been set
         //Needs to be threaded for multiple clients
         //updating the numConnections (need mutex lock)
@@ -207,13 +319,26 @@ namespace tlsw{
             }
 
             ssl = SSL_new(ctx);
-            //continue setup here
+            SSL_set_fd(ssl, client);
+            if(SSL_accept(ssl) <= 0){
+                ERR_print_errors_fp(stderr);
+            } else {
+                SSL_write(ssl,"hello",strlen("hello"));
+            }
+            SSL_free(ssl);
+            close(client);
         }
     }
 
     void
     Server::checkUpdate(void)
     {
+        /*
+            This will check with the client for updates.
+            IMPORTANT:
+                Make sure that both the client and server have
+                updates on.
+        */
         //Needs to add actual update command here
         if(!update)
             return;
