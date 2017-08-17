@@ -1,17 +1,15 @@
 #ifndef _TLSWCLIENT_H_
 #define _TLSWCLIENT_H_
 
-#include <stdio.h>
 #include <iostream>
 #include <fstream>
+#include <string>
+#include <cctype>
+#include <cstring>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/un.h>
-#include <unistd.h>
-#include <string>
-#include <sys/socket.h>
 #include <arpa/inet.h>
-#include <ctype.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -37,16 +35,21 @@ namespace tlsw{
                         const Client&);
 
             //Helper Functions
+            void recieveMessage(void);
+            void sendMessage(char*); 
+            void sendMessage(std::string); 
             void createSocket(void);
             void initSSL(void);
             void configureContext(void);
-            bool verifyPeer(SSL*);
+            bool verifyPeer(void);
             void defaultSetup(void);
             void startClient(void);
             
             //Getters and Setters
             void        setSock(int);
             void        setPort(int);
+            void        setBuffsize(int);
+            void        clearBuffer(void);
             void        setIP(std::string);
             void        setUpdate(bool);
             void        setCertificatePath(std::string);
@@ -54,6 +57,8 @@ namespace tlsw{
             void        setPrivateCertPath(std::string);
             int         getSock(void);
             int         getPort(void);
+            int         getBuffsize(void);
+            char*       getBuffer(void);
             std::string getIP(void);
             bool        isUpdate(void);
             bool        isSetup(void);
@@ -69,11 +74,14 @@ namespace tlsw{
             bool        configured;
             bool        setup;
             bool        connected;
+            char*       buffer;
+            int         buffsize;
             std::string ip; //required
             std::string certificate; //required
             std::string privatekey; //required
             std::string privatecert; //required
             SSL_CTX     *ctx;
+            SSL         *ssl;
     };
 }
 #endif

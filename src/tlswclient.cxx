@@ -12,20 +12,30 @@ namespace tlsw{
     Client::Client(void) : port(0), sock(0), update(0), sslinit(false),
                             configured(false), setup(false), certificate(""),
                             privatekey(""), privatecert(""), ctx(nullptr), ip(""),
-                            connected(false)
-    {}
+                            connected(false), ssl(nullptr), buffsize(2048)
+    {
+        buffer = (char*) new char[buffsize];
+        clearBuffer();
+    }
 
     Client::Client(std::string ip, int port) : port(port), sock(0), update(0),
                             configured(false), setup(false), certificate(""),
                             privatekey(""), privatecert(""), ctx(nullptr), 
-                            ip(ip), connected(false)
-    {}
+                            ip(ip), connected(false),ssl(nullptr),buffsize(2048)
+    {
+        buffer = (char*) new char[buffsize];
+        clearBuffer();
+    }
 
     Client::Client(const Client& c) : port(c.port), sock(c.sock),
                             update(c.update), setup(false),
                             certificate(c.certificate), privatekey(c.privatekey),
-                            ctx(nullptr), ip(c.ip), connected(c.connected)
-    {}
+                            ctx(nullptr), ip(c.ip), connected(c.connected),
+                            ssl(nullptr), buffsize(c.buffsize)
+    {
+        buffer = (char*) new char[buffsize];
+        clearBuffer();
+    }
 
     Client::~Client(void)
     {
@@ -35,6 +45,9 @@ namespace tlsw{
         EVP_cleanup();
 
         close(sock);
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
+        delete buffer;
     }
 
     Client*
@@ -56,11 +69,15 @@ namespace tlsw{
         configured  = false;
         setup       = false; 
         connected   = false;
+        buffsize    = rhs.buffsize;
+        buffer      = (char*) new char[buffsize];
+        clearBuffer();
         ip          = rhs.ip;
         certificate = rhs.certificate;
         privatekey  = rhs.privatekey;
         privatecert = rhs.privatecert;
         ctx         = nullptr;
+        ssl         = nullptr;
         
         return *this;
     }
@@ -95,6 +112,62 @@ namespace tlsw{
         
         return stream;
     } 
+    
+    void
+    Client::recieveMessage(void)
+    {
+        /*
+            Recieves the message and puts it into the client buffer
+        */ 
+
+        clearBuffer();
+
+        if(SSL_read(ssl,buffer,buffsize) <= 0){
+            perror("SSL_read failed tlswclient");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    void
+    Client::sendMessage(char* in)
+    {
+        /*
+            Sends the message in the current client buffer
+        */
+        if(std::strlen(in) > buffsize){
+            std::cerr << "Trying to send a message bigger than buffer size\n";
+            exit(EXIT_FAILURE);
+        }
+
+        clearBuffer();
+        strcpy(buffer,in);
+
+        if(SSL_write(ssl,buffer,buffsize) <= 0){
+            perror("SSL_write failed tlswclient");
+            exit(EXIT_FAILURE);
+        } 
+    }
+
+    void
+    Client::sendMessage(std::string in)
+    {
+        /*
+            Sends the message in the current client buffer
+        */
+        const char* newin = in.c_str();
+        if(std::strlen(newin) > buffsize){
+            std::cerr << "Trying to send a message bigger than buffer size\n";
+            exit(EXIT_FAILURE);
+        }
+
+        clearBuffer();
+        strcpy(buffer,newin);
+
+        if(SSL_write(ssl,buffer,buffsize) <= 0){
+            perror("SSL_write failed tlswclient");
+            exit(EXIT_FAILURE);
+        } 
+    }
 
     void
     Client::createSocket(void)
@@ -194,7 +267,7 @@ namespace tlsw{
     }
 
     bool
-    Client::verifyPeer(SSL* ssl)
+    Client::verifyPeer(void)
     {
         bool success = true;
         
@@ -225,10 +298,8 @@ namespace tlsw{
     void
     Client::startClient(void)
     {
-        SSL *ssl; 
         int handshake;
         int ret;
-        char buffer[1024] = {"\0"};
 
         if(!setup)
             defaultSetup();
@@ -248,16 +319,10 @@ namespace tlsw{
             exit(EXIT_FAILURE);
         }
 
-        if(!verifyPeer(ssl)){
+        if(!verifyPeer()){
             std::cerr << "Verifying failed\n";
             exit(EXIT_FAILURE);
         }
-
-        SSL_read(ssl,buffer,10);
-        std::cout << buffer << std::endl;
-    
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
     }
 
     void
@@ -270,6 +335,20 @@ namespace tlsw{
     Client::setPort(int p)
     {
         port = p;
+    }
+
+    void
+    Client::setBuffsize(int b)
+    {
+        buffsize = b;
+        delete buffer;
+        buffer = (char*) new char[buffsize];
+    }
+
+    void
+    Client::clearBuffer(void)
+    {
+        memset(buffer,'\0', buffsize);
     }
 
     void
@@ -312,6 +391,18 @@ namespace tlsw{
     Client::getPort(void)
     {
         return port;
+    }
+    
+    int
+    Client::getBuffsize(void)
+    {
+        return buffsize;
+    }
+
+    char*
+    Client::getBuffer(void)
+    {
+        return buffer;
     }
     
     std::string
