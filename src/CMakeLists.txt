@@ -20,7 +20,9 @@ INCLUDE_DIRECTORIES(${INCLUDE_DIR})
 # Setup project source compilation
 ADD_EXECUTABLE(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.${PROJ_EXT}"
                                "${CMAKE_CURRENT_SOURCE_DIR}/tlswserver.${PROJ_EXT}"
-                               "${CMAKE_CURRENT_SOURCE_DIR}/tlswclient.${PROJ_EXT}")
+                               "${CMAKE_CURRENT_SOURCE_DIR}/tlswclient.${PROJ_EXT}"
+                               "${CMAKE_CURRENT_SOURCE_DIR}/tlswhelper.${PROJ_EXT}")
+
 ADD_DEFINITIONS(-std=c++11 -fmax-errors=${MAX_ERR})
 IF (DEBUG)
   MESSAGE("Generating debug version")
