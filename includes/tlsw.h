@@ -3,5 +3,6 @@
 
 #include <tlswserver.h>
 #include <tlswclient.h>
+#include <tlswhelper.h>
 
 #endif
