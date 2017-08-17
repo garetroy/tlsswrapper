@@ -161,6 +161,58 @@ namespace tlsw{
     }
 
     void
+    Server::recieveMessage(SSL* ssl, char* in)
+    {
+        memset(in,'\0',std::strlen(in));
+
+        int lost = 0;
+        if((lost = SSL_read(ssl,in,std::strlen(in))) > 0){
+            perror("SSL_read failed tlswserver");
+            //exit thread
+            exit(EXIT_FAILURE);
+        }else if(lost ==0){
+            perror("Connection lost");
+            //exit thread
+            exit(EXIT_FAILURE);
+        } 
+
+        //add time and messages to logs
+    } 
+
+    void
+    Server::sendMessage(SSL* ssl, char* out)
+    {
+        //get time, log
+        int lost = 0;
+        if((lost = SSL_write(ssl, out, std::strlen(out))) < 0){
+            perror("Failed sending tlswserver");
+            //exitthread
+            exit(EXIT_FAILURE);
+        }else if(lost == 0){
+            perror("Connection lost");
+            //exitthread
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    void
+    Server::sendMessage(SSL* ssl, std::string out)
+    {
+        //get time, log
+        const char* newout = out.c_str();
+        int lost = 0;
+        if((lost = SSL_write(ssl, newout, std::strlen(newout))) < 0){
+            perror("Failed sending tlswserver");
+            //exitthread
+            exit(EXIT_FAILURE);
+        }else if(lost == 0){
+            perror("Connection lost");
+            //exitthread
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    void
     Server::createSocket()
     {
         /*
@@ -389,7 +441,7 @@ namespace tlsw{
             if(!verifyPeer(ssl))
                 std::cerr << "Verifying failed\n";
 
-            SSL_write(ssl,"hello",strlen("hello"));
+            sendMessage(ssl,"Hello br0");
             SSL_free(ssl);
             close(client);
         }

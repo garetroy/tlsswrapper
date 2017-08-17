@@ -43,6 +43,9 @@ namespace tlsw{
                         const Server&);
 
             //Helper functions
+            void recieveMessage(SSL*,char*);
+            void sendMessage(SSL*,char*);
+            void sendMessage(SSL*,std::string);
             void createSocket(void); 
             void initSSL(void);
             void createContext(void); 
