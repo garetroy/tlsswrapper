@@ -6,6 +6,7 @@
 #include <string>
 #include <cctype>
 #include <cstring>
+#include <cstdlib>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -44,6 +45,7 @@ namespace tlsw{
             bool verifyPeer(void);
             void defaultSetup(void);
             void startClient(void);
+            void getFile(char*);
             
             //Getters and Setters
             void        setSock(int);

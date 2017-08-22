@@ -163,6 +163,7 @@ namespace tlsw{
     void
     Server::recieveMessage(SSL* ssl, char* in)
     {
+        std::cerr << "Recieving Message" << std::endl;
         memset(in,'\0',std::strlen(in));
 
         int lost = 0;
@@ -170,7 +171,7 @@ namespace tlsw{
             perror("SSL_read failed tlswserver");
             //exit thread
             exit(EXIT_FAILURE);
-        }else if(lost ==0){
+        }else if(lost == 0){
             perror("Connection lost");
             //exit thread
             exit(EXIT_FAILURE);
@@ -442,9 +443,42 @@ namespace tlsw{
                 std::cerr << "Verifying failed\n";
 
             sendMessage(ssl,"Hello br0");
+            char buff[2048] = {'\0'};
+            while(1){
+            recieveMessage(ssl,buff);
+            std::cerr << "Recieved message:" << buff << std::endl;
+            if(strcmp(buff,"x001") == 0){
+                sendFile(ssl);
+            }
+            memset(buff,'\0',2048);
+            }
             SSL_free(ssl);
             close(client);
         }
+    }
+
+    void
+    Server::sendFile(SSL* ssl)
+    {
+        char filename[2048] = {'\0'};
+        recieveMessage(ssl,filename);
+        //Needs logging
+        FILE *f = fopen(filename,"rb");
+        fseek(f, 0, SEEK_END);
+        int fsize = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        char fsizec[20] = {'\0'};
+        snprintf(fsizec, sizeof(fsizec), "%d", fsize);
+        
+              
+        char *string = (char*)malloc(fsize + 1);
+        fread(string, fsize, 1, f);
+        fclose(f);
+            
+        sendMessage(ssl, fsizec);
+        sendMessage(ssl, string);
+        free(string);
     }
 
     void

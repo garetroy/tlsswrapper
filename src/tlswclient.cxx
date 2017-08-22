@@ -4,8 +4,6 @@
 //Needs Updates
 //Needs Versioning (version within class)
 //Needs filegetting
-//Needs Recv/Send wrapper
-//Needs Helperfunctions (will add)
 
 namespace tlsw{
     
@@ -325,6 +323,47 @@ namespace tlsw{
         }
     }
 
+
+    void
+    Client::getFile(char* filename)
+    {
+        sendMessage("x001\0");
+        sendMessage(filename);
+
+        FILE *fp;
+        int bytesrecieved  = 0;
+        int left           = 0;
+        int len            = 1;
+
+        fp = fopen(filename,"w+");
+        if(fp == nullptr){
+            perror("Failed to open file tlswclient");
+            exit(EXIT_FAILURE);
+        }
+
+        //Get Filesize
+        recieveMessage();
+        bytesrecieved = std::atoi(buffer);
+        left          = bytesrecieved;
+
+        if(bytesrecieved == 0){
+            fclose(fp);
+            return;
+        }else if(bytesrecieved < 0){
+            fclose(fp);
+            perror("Read error tlswclient");
+            exit(EXIT_FAILURE); 
+        }
+
+        while(((left > 0) && (len = SSL_read(ssl,buffer,256))) > 0)
+        {
+            fwrite(buffer, sizeof(char), len, fp);
+            left -= len;
+            clearBuffer();
+        }
+        fclose(fp);
+    }
+        
     void
     Client::setSock(int s)
     {

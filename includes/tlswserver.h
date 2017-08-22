@@ -16,6 +16,8 @@
 #include <iostream>
 #include <unistd.h>
 #include <fstream>
+#include <cstdlib>
+#include <numeric>
 #include <string>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -54,6 +56,7 @@ namespace tlsw{
             void defaultSetup(void);
             bool verifyPeer(SSL*);
             void startServer(void);
+            void sendFile(SSL*);
 
             //Getters & Setters
             void        setSock(int);
