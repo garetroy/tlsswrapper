@@ -1,3 +1,12 @@
+/*
+    tlswclient.cxx
+    The source file for tlswserver
+    Author:
+        Garett Roberts
+
+    IMPORTANT:
+        As of now, clients have their own buffers. Set the sizes accordingly
+*/
 #include <tlswclient.h>
 
 //Needs comments
@@ -51,12 +60,22 @@ namespace tlsw{
     Client*
     Client::clone(void) const
     {
+        /*
+            Creates a new instance of this object
+        */
         return new Client(*this);
     }
     
     Client&
     Client::operator=(const Client& rhs)
     {
+        /*
+            Assigns this object from another. It creates it's own buffersize
+            and needs to be reinitialized
+
+            @param:
+                rhs - (Client&) The client we want to copy from
+        */
         if(this == &rhs)
             return *this;
 
@@ -83,6 +102,18 @@ namespace tlsw{
     bool
     Client::operator==(const Client& c) const
     {
+        /*
+            This comparator comparing socket, port, updates, certificate,
+            ip address, private key, and privatecertificate
+        
+            @param:
+                c - (Client &) The other client object we want to compare
+                    against
+
+            @returns:
+                bool - True if same object 
+                       False if not the same object            
+        */
         if(typeid(*this) != typeid(c))
             return false;
             
@@ -99,12 +130,32 @@ namespace tlsw{
     bool
     Client::operator!=(const Client& c) const
     {
+        /*
+            This operator is using the inverse of the == operator
+            
+            @param:
+                c - (Client&) The client object we want to compare against
+            
+            @returns:
+                bool - True if they are not the same
+                        False if they are the same
+        */
         return !(*this == c);
     }
 
     std::ostream& 
     operator<<(std::ostream& stream, const Client& c)
     {
+        /*
+            Our operator overload to making printing this object possible
+            
+            @params:
+                stream - (std::ostream&) the stream we want to output to
+                c      - (Client&) the client we are printing
+            
+            @returns:
+                std::ostream& - the modified stream
+        */
         stream << "The client is connected(" << c.connected;
         stream << ") to port(" << c.port << ") at " << c.ip;
         
@@ -115,7 +166,8 @@ namespace tlsw{
     Client::recieveMessage(void)
     {
         /*
-            Recieves the message and puts it into the client buffer
+            Recieves the message and puts it into the client buffer.
+            It first clears the buffer, then sends it over an ssl connection.
         */ 
 
         clearBuffer();
@@ -130,7 +182,12 @@ namespace tlsw{
     Client::sendMessage(char* in)
     {
         /*
-            Sends the message in the current client buffer
+            Sends the message in the current client buffer.
+            It clears the buffer, copies the string to the buffer, then
+            send the message over an ssl connection via the buffer.
+        
+            @param:
+                in - (char*) the message we want to send
         */
         if(std::strlen(in) > buffsize){
             std::cerr << "Trying to send a message bigger than buffer size\n";
@@ -150,7 +207,12 @@ namespace tlsw{
     Client::sendMessage(std::string in)
     {
         /*
-            Sends the message in the current client buffer
+            Sends the message in the current client buffer.
+            It clears the buffer, copies the string to the buffer, then
+            send the message over an ssl connection via the buffer.
+        
+            @param:
+                in - (std::string) the message we want to send
         */
         const char* newin = in.c_str();
         if(std::strlen(newin) > buffsize){
@@ -170,6 +232,11 @@ namespace tlsw{
     void
     Client::createSocket(void)
     {
+        /*
+            This creates the socket for the program, then tries to connect
+            to the socket. It requires that the ip and port are filled out 
+            and there is a listning server.
+        */
         if(!configured)
             configureContext();
         
@@ -195,6 +262,9 @@ namespace tlsw{
     void
     Client::initSSL(void)
     {
+        /*
+            Initializes SSL
+        */
         SSL_library_init();
         SSL_load_error_strings();
         sslinit = true;
@@ -203,6 +273,12 @@ namespace tlsw{
     void
     Client::configureContext(void)
     {
+        /*
+            This monster is doing a lot of SSL verification and configuration.
+            It first checks to see if the certificates are even existant.
+            Then  checks their validity
+        */
+
         if(ctx != nullptr){
             SSL_CTX_free(ctx);
             ctx = nullptr;
@@ -267,6 +343,9 @@ namespace tlsw{
     bool
     Client::verifyPeer(void)
     {
+        /*
+            This is used to verify the peer with the given certificates.
+        */
         bool success = true;
         
         X509 *sslcert = nullptr;
@@ -288,6 +367,10 @@ namespace tlsw{
     void
     Client::defaultSetup(void)
     {
+        /*
+            This is going to be the default steps that we call when
+            setting up a client.
+        */
         initSSL();
         configureContext();
         createSocket();
@@ -296,6 +379,11 @@ namespace tlsw{
     void
     Client::startClient(void)
     {
+        /*
+            This is where the client actually starts up.
+            It does the default setup, checks for a connection and 
+            verifies the peer
+        */
         int handshake;
         int ret;
 
@@ -327,6 +415,16 @@ namespace tlsw{
     void
     Client::getFile(char* filename)
     {
+        /*
+            It get's a file from the server.
+            The first step is to send the x001 code to the server to let the
+            server know that it is requesting a file. It then sends the file-
+            name and then recieves the file from the server
+        
+            @param:
+                filename - (char*) the name of the file we want from the server
+        */
+
         sendMessage("x001\0");
         sendMessage(filename);
 

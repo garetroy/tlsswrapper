@@ -1,3 +1,14 @@
+/*
+    tlswclient.h
+    The header file for the tlswrapper client
+    Author:
+        Garett Roberts
+
+    This is a wrapper for a TCP/TLS client(that is originally written in c) that will provide basic deployment of a tlswclient without much hassle and using c++. A lot of the methods are explained in the tlswclient.cxx file. 
+    
+    IMPORTANT:
+        Items marked required must be filled out before attempting to start a client
+*/
 #ifndef _TLSWCLIENT_H_
 #define _TLSWCLIENT_H_
 
