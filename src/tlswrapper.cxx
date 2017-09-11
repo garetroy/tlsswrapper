@@ -25,6 +25,7 @@ int main(int argc, char* argv[])
         std::cout << ourclient << std::endl;
         ourclient.recieveMessage();
         std::cout << ourclient.getBuffer() << std::endl;
+        ourclient.getFile("test.txt");
     }else if(type == 3){
         //Testing Helper functions
         char buffer[3] = {'\0'};

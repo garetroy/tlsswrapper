@@ -9,10 +9,10 @@
 */
 #include <tlswclient.h>
 
-//Needs comments
 //Needs Updates
 //Needs Versioning (version within class)
 //Needs filegetting
+//Needs filerecieving
 
 namespace tlsw{
     

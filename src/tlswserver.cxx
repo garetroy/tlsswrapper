@@ -163,11 +163,10 @@ namespace tlsw{
     void
     Server::recieveMessage(SSL* ssl, char* in)
     {
-        std::cerr << "Recieving Message" << std::endl;
         memset(in,'\0',std::strlen(in));
 
-        int lost = 0;
-        if((lost = SSL_read(ssl,in,std::strlen(in))) > 0){
+        int lost = 1;
+        if((lost = SSL_read(ssl,in,3001)) < 0){
             perror("SSL_read failed tlswserver");
             //exit thread
             exit(EXIT_FAILURE);
@@ -442,15 +441,17 @@ namespace tlsw{
             if(!verifyPeer(ssl))
                 std::cerr << "Verifying failed\n";
 
+            char buff[3000] = {'\0'};
             sendMessage(ssl,"Hello br0");
-            char buff[2048] = {'\0'};
+            sleep(1);
             while(1){
-            recieveMessage(ssl,buff);
-            std::cerr << "Recieved message:" << buff << std::endl;
-            if(strcmp(buff,"x001") == 0){
-                sendFile(ssl);
-            }
-            memset(buff,'\0',2048);
+                recieveMessage(ssl,buff);
+                std::cerr << "Recieved message:" << buff << std::endl;
+                std::cerr << buff << std::endl;
+                if(strcmp(buff,"x001") == 0){
+                    sendFile(ssl);
+                }
+                memset(buff,'\0',3000);
             }
             SSL_free(ssl);
             close(client);
@@ -460,8 +461,11 @@ namespace tlsw{
     void
     Server::sendFile(SSL* ssl)
     {
-        char filename[2048] = {'\0'};
+        char filename[2064] = {'\0'};
         recieveMessage(ssl,filename);
+        //change to cerr(eventually logging?)
+        fprintf(stderr,"Sending file %s...",filename);
+
         //Needs logging
         FILE *f = fopen(filename,"rb");
         fseek(f, 0, SEEK_END);
@@ -471,7 +475,7 @@ namespace tlsw{
         char fsizec[20] = {'\0'};
         snprintf(fsizec, sizeof(fsizec), "%d", fsize);
         
-              
+        //Solve sending file?
         char *string = (char*)malloc(fsize + 1);
         fread(string, fsize, 1, f);
         fclose(f);
