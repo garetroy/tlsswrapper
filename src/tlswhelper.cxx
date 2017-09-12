@@ -74,4 +74,24 @@ namespace tlsw{
         }
         return characters;
     }
+
+    char*
+    prePend(const char* pre, const char* after)
+    {
+        /*
+            Prepends the variable pre to the after char*.
+            Makes after bigger, with a max of 2000.
+
+            Don't forget to free the buffer when done!
+        
+            @params:
+                pre   - (char*) the prefix
+                after - (char*) the suffix
+        */
+
+        char* buffer = (char*)malloc(sizeof(char)*2000);
+        strcpy(buffer,pre);
+        strncat(buffer,after,(2000-strlen(buffer)-1));
+        return buffer;
+    } 
 }

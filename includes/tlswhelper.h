@@ -9,10 +9,11 @@
 
 namespace tlsw{
     
-    void stripString(char*, char*);
-    void getTime(char*);
-    void lower(char*);
-    int  getLine(char*,size_t);
+    void  stripString(char*, char*);
+    void  getTime(char*);
+    void  lower(char*);
+    int   getLine(char*,size_t);
+    char* prePend(const char*,const char*);
     
 }
 #endif
