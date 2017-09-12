@@ -20,7 +20,7 @@ namespace tlsw{
                             configured(false), setup(false), certificate(""),
                             privatekey(""), privatecert(""), ctx(nullptr), ip(""),
                             connected(false), ssl(nullptr), buffsize(2048),
-                            version(0)
+                            version(0), filepath("./")
     {
         buffer = (char*) new char[buffsize];
         clearBuffer();
@@ -30,7 +30,7 @@ namespace tlsw{
                             configured(false), setup(false), certificate(""),
                             privatekey(""), privatecert(""), ctx(nullptr), 
                             ip(ip), connected(false),ssl(nullptr),buffsize(2048),
-                            version(0)
+                            version(0), filepath("./")
     {
         buffer = (char*) new char[buffsize];
         clearBuffer();
@@ -40,7 +40,8 @@ namespace tlsw{
                             update(c.update), setup(false),
                             certificate(c.certificate), privatekey(c.privatekey),
                             ctx(nullptr), ip(c.ip), connected(c.connected),
-                            ssl(nullptr), buffsize(c.buffsize), version(0)
+                            ssl(nullptr), buffsize(c.buffsize), version(0),
+                            filepath("./")
     {
         buffer = (char*) new char[buffsize];
         clearBuffer();
@@ -98,6 +99,7 @@ namespace tlsw{
         ctx         = nullptr;
         ssl         = nullptr;
         version     = rhs.version;
+        filepath    = rhs.filepath;
         
         return *this;
     }
@@ -126,6 +128,7 @@ namespace tlsw{
         same = same && (update == c.update) && (certificate == c.certificate);
         same = same && (ip == c.ip) && (privatekey == c.privatekey);
         same = same && (privatecert == c.privatecert) && (version == c.version);
+        same = same && (filepath == c.filepath);
         
         return same;
     }
@@ -439,7 +442,9 @@ namespace tlsw{
         int left           = 0;
         int len            = 1;
 
-        fp = fopen(filename,"w+");
+        char* path = prePend(filepath.c_str(),filename);
+
+        fp = fopen(path,"w+");
         if(fp == nullptr){
             perror("Failed to open file tlswclient");
             exit(EXIT_FAILURE);
@@ -467,7 +472,9 @@ namespace tlsw{
             left -= len;
             clearBuffer();
         }
+
         fclose(fp);
+        free(path);
 
     }
 
@@ -487,22 +494,32 @@ namespace tlsw{
         recieveMessage();      
         fprintf(stderr,"Version number: %s, Ours: %s\n",buffer,vers);
         if(strcmp(buffer,vers) != 0){
+
             fprintf(stderr,"Patching...\n");
             int error = 0;
-            getFile("patch"); //getfile not working?
-            if(system("chmod +x ./patch") < 0)
+            getFile("patch");
+    
+            //Creates the path in order to execute patch
+            char* path = prePend(filepath.c_str(),"patch");
+            char* temp = prePend("chmod +x ",path);
+            if(system(temp) < 0)
             {
                 perror("System call failed, check permissions");
                 error = 1;
             } 
             
-            if(system("./patch") < 0)
+            if(system(path) < 0)
             {
                 perror("System couldn't execute patch");
                 error = 1;
             } 
 
-            //system("rm ./patch");
+            free(temp);
+            temp = prePend("rm ",path);
+            system(temp);
+
+            free(temp);
+            free(path);
 
             if(error == 1)
                 exit(EXIT_FAILURE);
@@ -574,6 +591,12 @@ namespace tlsw{
         privatecert = path;
     }
     
+    void
+    Client::setFilePath(std::string path)
+    {
+        filepath = path;
+    }
+    
     int
     Client::getSock(void)
     {
@@ -638,5 +661,11 @@ namespace tlsw{
     Client::getPrivateCertPath(void)
     {
         return privatecert;
+    }
+
+    std::string
+    Client::getFilePath(void)
+    {
+        return filepath;
     }
 }
