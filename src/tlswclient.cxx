@@ -1,3 +1,5 @@
+//NEEDS SEND FILE
+//NEEDS LOGGING
 /*
     tlswclient.cxx
     The source file for tlswserver
@@ -8,11 +10,6 @@
         As of now, clients have their own buffers. Set the sizes accordingly
 */
 #include <tlswclient.h>
-
-//Needs Updates
-//Needs Versioning (version within class)
-//Needs filegetting
-//Needs filerecieving
 
 namespace tlsw{
     
@@ -452,7 +449,6 @@ namespace tlsw{
 
         //Get Filesize
         recieveMessage();
-        fprintf(stderr,"SIZE: %s\n",buffer); //something going on here?
         bytesrecieved = std::atoi(buffer);
         left          = bytesrecieved;
 
@@ -467,7 +463,6 @@ namespace tlsw{
 
         while(((left > 0) && (len = SSL_read(ssl,buffer,256))) > 0)
         {
-            fprintf(stderr,"%s\n",buffer);
             fwrite(buffer, sizeof(char), len, fp);
             left -= len;
             clearBuffer();

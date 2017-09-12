@@ -24,6 +24,8 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+#include <tlsw.h>
+
 namespace tlsw{
     
     class Server{
@@ -66,7 +68,7 @@ namespace tlsw{
             void        setCertificatePath(std::string);
             void        setPrivateKeyPath(std::string);
             void        setPrivateCertPath(std::string);
-            void        setPatchPath(std::string);
+            void        setFilePath(std::string);
             int         getSock(void);
             int         getPort(void);
             double      getVersion(void);
@@ -76,6 +78,7 @@ namespace tlsw{
             std::string getPrivateKeyPath(void);
             std::string getPrivateCertPath(void);
             std::string getPatchPath(void);
+            std::string getFilePath(void);
 
         private:
             int          sock;
@@ -89,7 +92,7 @@ namespace tlsw{
             std::string  certificate; //required
             std::string  privatekey; //required
             std::string  privatecert;//required
-            std::string  patchpath;
+            std::string  filepath;
             SSL_CTX      *ctx;
     };
 }

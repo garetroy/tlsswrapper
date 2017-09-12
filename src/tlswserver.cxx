@@ -1,3 +1,8 @@
+//NEEDS TO RECV FILE
+//NEEDS LOGGING
+//NEEDS MULTITHREADED
+//Needs hashmap (message/function), main loop
+//updating the numConnections (need mutex lock)
 /*
     tlswserver.cxx
     The source file for tlswserver
@@ -12,21 +17,21 @@ namespace tlsw{
         sock(0), setup(false), certificate(""), 
         privatekey(""), ctx(nullptr), sslinit(false),
         numConnections(0), configured(false), privatecert(""),
-        version(0)
+        version(0), filepath("./")
     {}
     
     Server::Server(int port) : port(port), update(false),
         sock(0), setup(false), certificate(""), 
         privatekey(""), ctx(nullptr), sslinit(false),
         numConnections(0),configured(false), privatecert(""),
-        version(0)
+        version(0), filepath("./")
     {}
     
     Server::Server(const Server& s) : port(s.port), update(s.update),
         sock(s.sock), setup(false), certificate(s.certificate),
         privatekey(s.privatekey), ctx(nullptr), sslinit(false),
         numConnections(0), configured(false), privatecert(""),
-        version(0)
+        version(0), filepath("./")
     {}
 
     Server::~Server(void)
@@ -87,6 +92,7 @@ namespace tlsw{
         ctx            = nullptr;
         numConnections = 0;
         version        = rhs.version;
+        filepath       = rhs.filepath;
         
        return *this; 
     } 
@@ -115,7 +121,7 @@ namespace tlsw{
         same = same && (update == s.update) && (sslinit == s.sslinit);
         same = same && (setup == s.setup) && (certificate == s.certificate);
         same = same && (privatekey == s.privatekey) && (privatecert == s.privatecert);
-        same = same && (version == s.version);
+        same = same && (version == s.version) && (filepath == s.filepath);
 
         return same;
     }
@@ -405,8 +411,6 @@ namespace tlsw{
     }
     
 
-    //Needs hashmap (message/function), loading included
-    //Needs versioning checking method
  
     void
     Server::startServer(void)
@@ -423,8 +427,7 @@ namespace tlsw{
         */
         if(setup != true)
             defaultSetup();
-        //Needs to be threaded for multiple clients
-        //updating the numConnections (need mutex lock)
+
         while(1){
             struct sockaddr_in addr;
             SSL  *ssl;
@@ -447,11 +450,8 @@ namespace tlsw{
                 std::cerr << "Verifying failed\n";
 
             checkUpdate(ssl);
-            sleep(3);
 
             char buff[3000] = {'\0'};
-            sendMessage(ssl,"Hello br0");
-            sleep(1);
             while(1){
                 recieveMessage(ssl,buff);
                 std::cerr << "Recieved message:" << buff << std::endl;
@@ -483,8 +483,11 @@ namespace tlsw{
         //change to cerr(eventually logging?)
         fprintf(stderr,"Sending file %s...\n",filename);
 
+        //NEEDS To CHECK FOR VIABLE PATH
+        char* path = prePend(filepath.c_str(),filename);
+
         //Needs logging
-        FILE *f = fopen(filename,"rb");
+        FILE *f = fopen(path,"rb");
         fseek(f, 0, SEEK_END);
         int fsize = ftell(f);
         fseek(f, 0, SEEK_SET);
@@ -497,10 +500,10 @@ namespace tlsw{
         fread(string, fsize, 1, f);
         fclose(f);
 
-        fprintf(stderr,"SIZE: %s\n",fsizec);
         sendMessage(ssl, fsizec);
         sendMessage(ssl, string);
         free(string);
+        free(path);
     }
 
     void
@@ -568,6 +571,12 @@ namespace tlsw{
     {
         privatecert = path;
     }
+    
+    void
+    Server::setFilePath(std::string path)
+    {
+        filepath = path;
+    }
 
     int
     Server::getSock(void)
@@ -615,5 +624,11 @@ namespace tlsw{
     Server::getPrivateCertPath(void)
     {
         return privatecert;
+    }
+
+    std::string
+    Server::getFilePath(void)
+    {
+        return filepath;
     }
 }
