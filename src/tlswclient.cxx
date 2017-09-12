@@ -19,7 +19,8 @@ namespace tlsw{
     Client::Client(void) : port(0), sock(0), update(0), sslinit(false),
                             configured(false), setup(false), certificate(""),
                             privatekey(""), privatecert(""), ctx(nullptr), ip(""),
-                            connected(false), ssl(nullptr), buffsize(2048)
+                            connected(false), ssl(nullptr), buffsize(2048),
+                            version(0)
     {
         buffer = (char*) new char[buffsize];
         clearBuffer();
@@ -28,7 +29,8 @@ namespace tlsw{
     Client::Client(std::string ip, int port) : port(port), sock(0), update(0),
                             configured(false), setup(false), certificate(""),
                             privatekey(""), privatecert(""), ctx(nullptr), 
-                            ip(ip), connected(false),ssl(nullptr),buffsize(2048)
+                            ip(ip), connected(false),ssl(nullptr),buffsize(2048),
+                            version(0)
     {
         buffer = (char*) new char[buffsize];
         clearBuffer();
@@ -38,7 +40,7 @@ namespace tlsw{
                             update(c.update), setup(false),
                             certificate(c.certificate), privatekey(c.privatekey),
                             ctx(nullptr), ip(c.ip), connected(c.connected),
-                            ssl(nullptr), buffsize(c.buffsize)
+                            ssl(nullptr), buffsize(c.buffsize), version(0)
     {
         buffer = (char*) new char[buffsize];
         clearBuffer();
@@ -95,6 +97,7 @@ namespace tlsw{
         privatecert = rhs.privatecert;
         ctx         = nullptr;
         ssl         = nullptr;
+        version     = rhs.version;
         
         return *this;
     }
@@ -122,7 +125,7 @@ namespace tlsw{
         same = (sock == c.sock) && (port == c.port);
         same = same && (update == c.update) && (certificate == c.certificate);
         same = same && (ip == c.ip) && (privatekey == c.privatekey);
-        same = same && (privatecert == c.privatecert);
+        same = same && (privatecert == c.privatecert) && (version == c.version);
         
         return same;
     }
@@ -158,6 +161,7 @@ namespace tlsw{
         */
         stream << "The client is connected(" << c.connected;
         stream << ") to port(" << c.port << ") at " << c.ip;
+        stream << " version(" << c.version << ")";
         
         return stream;
     } 
@@ -409,6 +413,8 @@ namespace tlsw{
             std::cerr << "Verifying failed\n";
             exit(EXIT_FAILURE);
         }
+
+        checkUpdate();
     }
 
 
@@ -441,6 +447,7 @@ namespace tlsw{
 
         //Get Filesize
         recieveMessage();
+        fprintf(stderr,"SIZE: %s\n",buffer); //something going on here?
         bytesrecieved = std::atoi(buffer);
         left          = bytesrecieved;
 
@@ -455,11 +462,54 @@ namespace tlsw{
 
         while(((left > 0) && (len = SSL_read(ssl,buffer,256))) > 0)
         {
+            fprintf(stderr,"%s\n",buffer);
             fwrite(buffer, sizeof(char), len, fp);
             left -= len;
             clearBuffer();
         }
         fclose(fp);
+
+    }
+
+    void
+    Client::checkUpdate(void)
+    {
+        /*
+            This will check the server for updates.
+        */
+
+        if(!update)
+            return;
+
+        char vers[4] = {'\0'};
+        snprintf(vers, sizeof(vers), "%f", version);
+    
+        recieveMessage();      
+        fprintf(stderr,"Version number: %s, Ours: %s\n",buffer,vers);
+        if(strcmp(buffer,vers) != 0){
+            fprintf(stderr,"Patching...\n");
+            int error = 0;
+            getFile("patch"); //getfile not working?
+            if(system("chmod +x ./patch") < 0)
+            {
+                perror("System call failed, check permissions");
+                error = 1;
+            } 
+            
+            if(system("./patch") < 0)
+            {
+                perror("System couldn't execute patch");
+                error = 1;
+            } 
+
+            //system("rm ./patch");
+
+            if(error == 1)
+                exit(EXIT_FAILURE);
+
+            fprintf(stderr,"Patched!\n");
+            exit(EXIT_SUCCESS);
+        }
     }
         
     void
@@ -498,6 +548,12 @@ namespace tlsw{
     Client::setUpdate(bool u)
     {
         update = u;
+    }
+
+    void
+    Client::setVersion(double vers)
+    {
+        version = vers;
     }
     
     void
@@ -546,6 +602,12 @@ namespace tlsw{
     Client::getIP(void)
     {
         return ip;
+    }
+
+    double
+    Client::getVersion(void)
+    {
+        return version;
     }
     
     bool

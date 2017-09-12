@@ -11,19 +11,22 @@ namespace tlsw{
     Server::Server(void) : port(0), update(false),
         sock(0), setup(false), certificate(""), 
         privatekey(""), ctx(nullptr), sslinit(false),
-        numConnections(0), configured(false), privatecert("")
+        numConnections(0), configured(false), privatecert(""),
+        version(0)
     {}
     
     Server::Server(int port) : port(port), update(false),
         sock(0), setup(false), certificate(""), 
         privatekey(""), ctx(nullptr), sslinit(false),
-        numConnections(0),configured(false), privatecert("")
+        numConnections(0),configured(false), privatecert(""),
+        version(0)
     {}
     
     Server::Server(const Server& s) : port(s.port), update(s.update),
         sock(s.sock), setup(false), certificate(s.certificate),
         privatekey(s.privatekey), ctx(nullptr), sslinit(false),
-        numConnections(0), configured(false), privatecert("")
+        numConnections(0), configured(false), privatecert(""),
+        version(0)
     {}
 
     Server::~Server(void)
@@ -83,6 +86,7 @@ namespace tlsw{
         privatecert    = rhs.privatecert;
         ctx            = nullptr;
         numConnections = 0;
+        version        = rhs.version;
         
        return *this; 
     } 
@@ -111,6 +115,7 @@ namespace tlsw{
         same = same && (update == s.update) && (sslinit == s.sslinit);
         same = same && (setup == s.setup) && (certificate == s.certificate);
         same = same && (privatekey == s.privatekey) && (privatecert == s.privatecert);
+        same = same && (version == s.version);
 
         return same;
     }
@@ -157,6 +162,7 @@ namespace tlsw{
         stream << " certificatePath(" << s.certificate;
         stream << ") privateKeyPath(" << s.privatekey << ")";
         stream << " privateCertPath(" << s.privatecert << ")";
+        stream << " version(" << s.version << ")";
         return stream;
     }
 
@@ -399,7 +405,6 @@ namespace tlsw{
     }
     
 
-    //Needs send file
     //Needs hashmap (message/function), loading included
     //Needs versioning checking method
  
@@ -441,6 +446,9 @@ namespace tlsw{
             if(!verifyPeer(ssl))
                 std::cerr << "Verifying failed\n";
 
+            checkUpdate(ssl);
+            sleep(3);
+
             char buff[3000] = {'\0'};
             sendMessage(ssl,"Hello br0");
             sleep(1);
@@ -481,31 +489,41 @@ namespace tlsw{
         int fsize = ftell(f);
         fseek(f, 0, SEEK_SET);
 
-        char fsizec[20] = {'\0'};
+        char fsizec[5] = {'\0'};
         snprintf(fsizec, sizeof(fsizec), "%d", fsize);
         
         //Solve sending file?
         char *string = (char*)malloc(fsize + 1);
         fread(string, fsize, 1, f);
         fclose(f);
-            
+
+        fprintf(stderr,"SIZE: %s\n",fsizec);
         sendMessage(ssl, fsizec);
         sendMessage(ssl, string);
         free(string);
     }
 
     void
-    Server::checkUpdate(void)
+    Server::checkUpdate(SSL* ssl)
     {
         /*
             This will check with the client for updates.
             IMPORTANT:
                 Make sure that both the client and server have
                 updates on.
+
+            @param:
+                ssl - (SSL*) the ssl session we want to check
         */
-        //Needs to add actual update command here
+
         if(!update)
             return;
+
+        fprintf(stderr, "Checking for update..\n");
+        char vers[4] = {'\0'};
+        snprintf(vers, sizeof(vers), "%f", version);
+        sendMessage(ssl,vers);
+
         return;
     } 
 
@@ -525,6 +543,12 @@ namespace tlsw{
     Server::setUpdate(bool updating)
     {
         update = updating;
+    }
+
+    void
+    Server::setVersion(double ver)
+    {
+        version = ver;
     }
 
     void
@@ -555,6 +579,12 @@ namespace tlsw{
     Server::getPort(void)
     {
         return port;
+    }
+    
+    double
+    Server::getVersion(void)
+    {
+        return version;
     }
     
     bool

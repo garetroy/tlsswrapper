@@ -13,6 +13,8 @@ int main(int argc, char* argv[])
         ourserver.setCertificatePath("/Users/garett/Projects/tlswrapper/cert/ca.crt");
         ourserver.setPrivateKeyPath("/Users/garett/Projects/tlswrapper/cert/server.key");
         ourserver.setPrivateCertPath("/Users/garett/Projects/tlswrapper/cert/server.crt");
+        ourserver.setUpdate(true);
+        ourserver.setVersion(0.3);
         ourserver.startServer();
         std::cout << ourserver << std::endl;
     }else if(type == 0){
@@ -21,6 +23,8 @@ int main(int argc, char* argv[])
         ourclient.setCertificatePath("/Users/garett/Projects/tlswrapper/cert/ca.crt");
         ourclient.setPrivateKeyPath("/Users/garett/Projects/tlswrapper/cert/client.key");
         ourclient.setPrivateCertPath("/Users/garett/Projects/tlswrapper/cert/client.crt");
+        ourclient.setUpdate(true);
+        ourclient.setVersion(0.2);
         ourclient.startClient();
         std::cout << ourclient << std::endl;
         ourclient.recieveMessage();

@@ -57,6 +57,7 @@ namespace tlsw{
             void defaultSetup(void);
             void startClient(void);
             void getFile(char*);
+            void checkUpdate(void);
             
             //Getters and Setters
             void        setSock(int);
@@ -65,6 +66,7 @@ namespace tlsw{
             void        clearBuffer(void);
             void        setIP(std::string);
             void        setUpdate(bool);
+            void        setVersion(double);
             void        setCertificatePath(std::string);
             void        setPrivateKeyPath(std::string);
             void        setPrivateCertPath(std::string);
@@ -73,6 +75,7 @@ namespace tlsw{
             int         getBuffsize(void);
             char*       getBuffer(void);
             std::string getIP(void);
+            double      getVersion(void);
             bool        isUpdate(void);
             bool        isSetup(void);
             std::string getCertificatePath(void);
@@ -82,6 +85,7 @@ namespace tlsw{
         private:
             int         port; //required
             int         sock;
+            double      version;
             bool        update;
             bool        sslinit;
             bool        configured;

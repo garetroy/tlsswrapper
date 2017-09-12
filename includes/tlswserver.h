@@ -52,7 +52,7 @@ namespace tlsw{
             void initSSL(void);
             void createContext(void); 
             void configureContext(void);
-            void checkUpdate(void);
+            void checkUpdate(SSL*);
             void defaultSetup(void);
             bool verifyPeer(SSL*);
             void startServer(void);
@@ -62,21 +62,26 @@ namespace tlsw{
             void        setSock(int);
             void        setPort(int);
             void        setUpdate(bool);
+            void        setVersion(double);
             void        setCertificatePath(std::string);
             void        setPrivateKeyPath(std::string);
             void        setPrivateCertPath(std::string);
+            void        setPatchPath(std::string);
             int         getSock(void);
             int         getPort(void);
+            double      getVersion(void);
             bool        isUpdate(void);
             bool        isSetup(void);
             std::string getCertificatePath(void);
             std::string getPrivateKeyPath(void);
             std::string getPrivateCertPath(void);
+            std::string getPatchPath(void);
 
         private:
             int          sock;
             int          port; //required
             int          numConnections;
+            double       version;
             bool         update;
             bool         sslinit;
             bool         configured;
@@ -84,6 +89,7 @@ namespace tlsw{
             std::string  certificate; //required
             std::string  privatekey; //required
             std::string  privatecert;//required
+            std::string  patchpath;
             SSL_CTX      *ctx;
     };
 }
