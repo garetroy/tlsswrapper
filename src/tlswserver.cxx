@@ -461,10 +461,19 @@ namespace tlsw{
     void
     Server::sendFile(SSL* ssl)
     {
+        /*
+            Gets the filename that is desired and then
+            sends the desired filename and it's size if such file exists.
+    
+
+            @param:
+                ssl - (SSL*) the ssl connection we want to interact with
+        */
+
         char filename[2064] = {'\0'};
         recieveMessage(ssl,filename);
         //change to cerr(eventually logging?)
-        fprintf(stderr,"Sending file %s...",filename);
+        fprintf(stderr,"Sending file %s...\n",filename);
 
         //Needs logging
         FILE *f = fopen(filename,"rb");
