@@ -11,10 +11,8 @@ Go to the build directory then continue with the following commands.
     ./recmake.sh
     ./build.sh
 
-Then it is built to run the main in src/tlswrapper.cxx by executing the command
+Then it is built to run the main in src/tlswrapper.cxx by executing the command in the build directory.
     
     ./tlswrapper [option]
-
-in the build directory.
 
 Build scheme made with [C-Bed](https://github.com/GarrettMorrison/C-Bed)
