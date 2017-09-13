@@ -1,3 +1,7 @@
+/*
+    This is a basic program that just starts the server/client and 
+    sends a few messages to the server from the client
+*/
 #include <tlsw.h>
 
 int main(int argc, char* argv[])
