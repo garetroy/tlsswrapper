@@ -16,21 +16,24 @@ namespace tlsw{
         sock(0), setup(false), certificate(""), 
         privatekey(""), ctx(nullptr), sslinit(false),
         numconnections(0), configured(false), privatecert(""),
-        version(0), filepath("./"), maxconnections(5), threads(5)
+        version(0), filepath("./"), maxconnections(5), threads(5),
+        funcset(false)
     {}
     
     Server::Server(int port) : port(port), update(false),
         sock(0), setup(false), certificate(""), 
         privatekey(""), ctx(nullptr), sslinit(false),
         numconnections(0),configured(false), privatecert(""),
-        version(0), filepath("./"), maxconnections(5), threads(5)
+        version(0), filepath("./"), maxconnections(5), threads(5),
+        funcset(false)
     {}
     
     Server::Server(const Server& s) : port(s.port), update(s.update),
         sock(s.sock), setup(false), certificate(s.certificate),
         privatekey(s.privatekey), ctx(nullptr), sslinit(false),
         numconnections(0), configured(false), privatecert(""),
-        version(0), filepath("./"), maxconnections(5), threads(5)
+        version(0), filepath("./"), maxconnections(5), threads(5),
+        funcset(false)
     {}
 
     Server::~Server(void)
@@ -93,6 +96,8 @@ namespace tlsw{
         version        = rhs.version;
         filepath       = rhs.filepath;
         maxconnections = rhs.maxconnections;
+        func           = rhs.func;
+        funcset        = rhs.funcset;
         
        return *this; 
     } 
@@ -122,7 +127,8 @@ namespace tlsw{
         same = same && (setup == s.setup) && (certificate == s.certificate);
         same = same && (privatekey == s.privatekey) && (privatecert == s.privatecert);
         same = same && (version == s.version) && (filepath == s.filepath);
-        same = same && (maxconnections == s.maxconnections);
+        same = same && (maxconnections == s.maxconnections) && (funcset == s.funcset);
+        same = same && (func == s.func);
 
         return same;
     }
@@ -488,7 +494,9 @@ namespace tlsw{
         /*
             This function is what runs the while loop for each individual 
             connecting client. It's functionality is given to us from the 
-            individual.
+            individual. If a function is given to the server via
+            setMainFunction, then the loop will run that function for every
+            iteration of the while loop.
 
             @params:
                 ssl - (SSL*) the ssl connection correlated to this thread
@@ -505,6 +513,9 @@ namespace tlsw{
                     sendFile(ssl);
 
                 memset(buff,'\0',3000);
+                if(funcset)
+                    func();
+
             } catch (int threadstatus) {
                 numconnmtx.lock();
                 numconnections--;
@@ -693,6 +704,13 @@ namespace tlsw{
     Server::setFilePath(std::string path)
     {
         filepath = path;
+    }
+
+    void
+    Server::setMainFunction(void(*in)(void))
+    {
+        funcset = true;
+        func = in;
     }
 
     int

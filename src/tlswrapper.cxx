@@ -1,6 +1,12 @@
 #include <openssl/ssl.h>
 #include <tlsw.h>
 
+void
+printme(void)
+{
+    fprintf(stderr,"HERE");
+}
+
 int main(int argc, char* argv[])
 {
     int type = 3;
@@ -15,7 +21,8 @@ int main(int argc, char* argv[])
         ourserver.setPrivateCertPath("/Users/garett/Projects/tlswrapper/cert/server.crt");
         ourserver.setFilePath("./serverfiles/");
         ourserver.setUpdate(true);
-        ourserver.setVersion(0.3);
+        ourserver.setVersion(0.2);
+        ourserver.setMainFunction(printme);
         ourserver.startServer();
         std::cout << ourserver << std::endl;
     }else if(type == 0){
@@ -30,8 +37,6 @@ int main(int argc, char* argv[])
         ourclient.startClient();
         std::cout << ourclient << std::endl;
         ourclient.recieveMessage();
-        std::cout << ourclient.getBuffer() << std::endl;
-        ourclient.getFile("test.txt");
     }else if(type == 3){
         //Testing Helper functions
         char buffer[3] = {'\0'};

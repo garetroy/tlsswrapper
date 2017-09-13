@@ -76,6 +76,7 @@ namespace tlsw{
             void        setPrivateKeyPath(std::string);
             void        setPrivateCertPath(std::string);
             void        setFilePath(std::string);
+            void        setMainFunction(void(*in)(void));
             int         getSock(void);
             int         getPort(void);
             double      getVersion(void);
@@ -101,12 +102,14 @@ namespace tlsw{
             bool         configured;
             bool         setup;
             bool         tls; 
+            bool         funcset;
             std::string  certificate; //required for tls
             std::string  privatekey; //required for tls
             std::string  privatecert;//required for tls
             std::string  filepath;
             SSL_CTX      *ctx;
             std::mutex   numconnmtx;
+            void         (*func)(void);
 
             std::vector<std::thread> threads;
     };
