@@ -60,6 +60,7 @@ namespace tlsw{
             void startClient(void);
             void getFile(char*);
             void checkUpdate(void);
+            void sendFile(void);
             
             //Getters and Setters
             void        setSock(int);

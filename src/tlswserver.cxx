@@ -1,4 +1,3 @@
-//NEEDS TO RECV FILE
 //NEEDS LOGGING
 //NEEDS MULTITHREADED
 //Needs hashmap (message/function), main loop
@@ -478,13 +477,19 @@ namespace tlsw{
                 ssl - (SSL*) the ssl connection we want to interact with
         */
 
-        char filename[2064] = {'\0'};
+        char filename[2048] = {'\0'};
         recieveMessage(ssl,filename);
         //change to cerr(eventually logging?)
         fprintf(stderr,"Sending file %s...\n",filename);
 
-        //NEEDS To CHECK FOR VIABLE PATH
         char* path = prePend(filepath.c_str(),filename);
+
+        //Checking path
+        std::ifstream desiredfile(path);
+        if(!desiredfile){
+            std::cerr << "Desired path " << path << " invalid" << std::endl; 
+            exit(EXIT_FAILURE);
+        }
 
         //Needs logging
         FILE *f = fopen(path,"rb");
@@ -496,7 +501,7 @@ namespace tlsw{
         snprintf(fsizec, sizeof(fsizec), "%d", fsize);
         
         //Solve sending file?
-        char *string = (char*)malloc(fsize + 1);
+        char *string = (char*)new char[fsize + 1];
         fread(string, fsize, 1, f);
         fclose(f);
 
@@ -504,6 +509,60 @@ namespace tlsw{
         sendMessage(ssl, string);
         free(string);
         free(path);
+    }
+
+    void
+    Server::getFile(SSL* ssl, char* filename)
+    {
+        /*
+            Sends a file to the given ssl connection.
+            It then sends the filename and then recieves the file from the client
+        
+            @param:
+                filename - (char*) the name of the file we want from the client
+                ssl      - (SSL*) the ssl connection we want to send to
+        */
+
+        sendMessage(ssl,filename);
+
+        FILE* fp;
+        int   bytesrecieved  = 0;
+        int   left           = 0;
+        int   len            = 1;
+        char  buffer[3000]   = {'\0'};
+
+        char* path = prePend(filepath.c_str(),filename);
+
+        fp = fopen(path,"w+");
+        if(fp == nullptr){
+            perror("Failed to open file tlswclient");
+            exit(EXIT_FAILURE);
+        }
+
+        //Get Filesize
+        recieveMessage(ssl,buffer);
+        bytesrecieved = std::atoi(buffer);
+        left          = bytesrecieved;
+
+        if(bytesrecieved == 0){
+            fclose(fp);
+            return;
+        }else if(bytesrecieved < 0){
+            fclose(fp);
+            perror("Read error tlswclient");
+            exit(EXIT_FAILURE); 
+        }
+
+        while(((left > 0) && (len = SSL_read(ssl,buffer,256))) > 0)
+        {
+            fwrite(buffer, sizeof(char), len, fp);
+            left -= len;
+            memset(buffer,'\0',3000);
+        }
+
+        fclose(fp);
+        free(path);
+
     }
 
     void

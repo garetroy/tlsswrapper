@@ -1,4 +1,3 @@
-//NEEDS SEND FILE
 //NEEDS LOGGING
 /*
     tlswclient.cxx
@@ -416,6 +415,50 @@ namespace tlsw{
 
         checkUpdate();
     }
+
+    void
+    Client::sendFile(void)
+    {
+        /*
+            Gets the filename that is desired and then
+            sends the desired filename and it's size if such file exists.
+    
+        */
+
+        recieveMessage();
+         
+        //change to cerr(eventually logging?)
+        fprintf(stderr,"Sending file %s...\n",buffer);
+
+        char* path = prePend(filepath.c_str(),buffer);
+
+        //Checking path
+        std::ifstream desiredfile(path);
+        if(!desiredfile){
+            std::cerr << "Desired path " << path << " invalid" << std::endl; 
+            exit(EXIT_FAILURE);
+        }
+
+        //Needs logging
+        FILE *f = fopen(path,"rb");
+        fseek(f, 0, SEEK_END);
+        int fsize = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        char fsizec[5] = {'\0'};
+        snprintf(fsizec, sizeof(fsizec), "%d", fsize);
+        
+        //Solve sending file?
+        char *string = (char*)new char[fsize + 1];
+        fread(string, fsize, 1, f);
+        fclose(f);
+
+        sendMessage(fsizec);
+        sendMessage(string);
+        free(string);
+        free(path);
+    }
+
 
 
     void

@@ -59,6 +59,7 @@ namespace tlsw{
             bool verifyPeer(SSL*);
             void startServer(void);
             void sendFile(SSL*);
+            void getFile(SSL*,char*);
 
             //Getters & Setters
             void        setSock(int);

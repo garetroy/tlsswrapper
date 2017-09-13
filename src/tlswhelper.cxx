@@ -89,7 +89,7 @@ namespace tlsw{
                 after - (char*) the suffix
         */
 
-        char* buffer = (char*)malloc(sizeof(char)*2000);
+        char* buffer = (char*)new char[2000];
         strcpy(buffer,pre);
         strncat(buffer,after,(2000-strlen(buffer)-1));
         return buffer;
