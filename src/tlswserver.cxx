@@ -15,22 +15,22 @@ namespace tlsw{
     Server::Server(void) : port(0), update(false),
         sock(0), setup(false), certificate(""), 
         privatekey(""), ctx(nullptr), sslinit(false),
-        numConnections(0), configured(false), privatecert(""),
-        version(0), filepath("./")
+        numconnections(0), configured(false), privatecert(""),
+        version(0), filepath("./"), maxconnections(5), threads(5)
     {}
     
     Server::Server(int port) : port(port), update(false),
         sock(0), setup(false), certificate(""), 
         privatekey(""), ctx(nullptr), sslinit(false),
-        numConnections(0),configured(false), privatecert(""),
-        version(0), filepath("./")
+        numconnections(0),configured(false), privatecert(""),
+        version(0), filepath("./"), maxconnections(5), threads(5)
     {}
     
     Server::Server(const Server& s) : port(s.port), update(s.update),
         sock(s.sock), setup(false), certificate(s.certificate),
         privatekey(s.privatekey), ctx(nullptr), sslinit(false),
-        numConnections(0), configured(false), privatecert(""),
-        version(0), filepath("./")
+        numconnections(0), configured(false), privatecert(""),
+        version(0), filepath("./"), maxconnections(5), threads(5)
     {}
 
     Server::~Server(void)
@@ -89,9 +89,10 @@ namespace tlsw{
         privatekey     = rhs.privatekey;
         privatecert    = rhs.privatecert;
         ctx            = nullptr;
-        numConnections = 0;
+        numconnections = 0;
         version        = rhs.version;
         filepath       = rhs.filepath;
+        maxconnections = rhs.maxconnections;
         
        return *this; 
     } 
@@ -121,6 +122,7 @@ namespace tlsw{
         same = same && (setup == s.setup) && (certificate == s.certificate);
         same = same && (privatekey == s.privatekey) && (privatecert == s.privatecert);
         same = same && (version == s.version) && (filepath == s.filepath);
+        same = same && (maxconnections == s.maxconnections);
 
         return same;
     }
@@ -161,7 +163,7 @@ namespace tlsw{
         */
 
         stream << "The Server's port(" << s.port << ")";
-        stream << " has " << s.numConnections << " connections";
+        stream << " has " << s.numconnections << " connections";
         stream << " and updates(" << s.update << ")";
         stream << " setup(" << s.setup << ")";
         stream << " certificatePath(" << s.certificate;
@@ -180,11 +182,15 @@ namespace tlsw{
         if((lost = SSL_read(ssl,in,3001)) < 0){
             perror("SSL_read failed tlswserver");
             //exit thread
-            exit(EXIT_FAILURE);
+            //logging
+            //setcodes
+            throw 0;
         }else if(lost == 0){
             perror("Connection lost");
             //exit thread
-            exit(EXIT_FAILURE);
+            //logging
+            //setcodes
+            throw 0;
         } 
 
         //add time and messages to logs
@@ -198,11 +204,13 @@ namespace tlsw{
         if((lost = SSL_write(ssl, out, std::strlen(out))) < 0){
             perror("Failed sending tlswserver");
             //exitthread
-            exit(EXIT_FAILURE);
+            //needs loggng
+            //needs codes
+            throw 0;
         }else if(lost == 0){
             perror("Connection lost");
             //exitthread
-            exit(EXIT_FAILURE);
+            throw 0;
         }
     }
 
@@ -449,19 +457,63 @@ namespace tlsw{
                 std::cerr << "Verifying failed\n";
 
             checkUpdate(ssl);
-
-            char buff[3000] = {'\0'};
-            while(1){
-                recieveMessage(ssl,buff);
-                std::cerr << "Recieved message:" << buff << std::endl;
-                std::cerr << buff << std::endl;
-                if(strcmp(buff,"x001") == 0){
-                    sendFile(ssl);
-                }
-                memset(buff,'\0',3000);
+        
+            //uses status for easier lock() functionality
+            numconnmtx.lock();
+            bool status = (maxconnections == numconnections);
+            numconnmtx.unlock();
+            while(status){
+                //log
+                sleep(1);
+                numconnmtx.lock();
+                status = (maxconnections == numconnections);
+                numconnmtx.lock();
             }
-            SSL_free(ssl);
-            close(client);
+
+            //log
+            //NEEDS TO CHECK IF THREAD IS STILL RUNNING, needs to send client as well
+            threads[numconnections] = std::thread(&Server::threadFunction,this,ssl,client);
+            threads[numconnections].detach();
+
+            numconnmtx.lock();
+            numconnections++;
+            numconnmtx.unlock();
+            
+        }
+    }
+
+    void
+    Server::threadFunction(SSL* ssl,int client)
+    {
+        /*
+            This function is what runs the while loop for each individual 
+            connecting client. It's functionality is given to us from the 
+            individual.
+
+            @params:
+                ssl - (SSL*) the ssl connection correlated to this thread
+        */
+        numconnmtx.lock();
+        std::cerr << numconnections << std::endl;
+        numconnmtx.unlock();
+        char buff[3000] = {'\0'};
+        while(1){
+            try{
+                //Make sure that below is informed to developers // hashmap here?
+                recieveMessage(ssl,buff);
+                if(strcmp(buff,"x001") == 0)
+                    sendFile(ssl);
+
+                memset(buff,'\0',3000);
+            } catch (int threadstatus) {
+                numconnmtx.lock();
+                numconnections--;
+                numconnmtx.unlock();
+                //checkthreadstatus log
+                SSL_free(ssl);
+                close(client);
+                return;
+            }
         }
     }
 

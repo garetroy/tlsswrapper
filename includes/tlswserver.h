@@ -19,6 +19,9 @@
 #include <cstdlib>
 #include <numeric>
 #include <string>
+#include <thread>
+#include <vector>
+#include <mutex>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <openssl/ssl.h>
@@ -60,12 +63,14 @@ namespace tlsw{
             void startServer(void);
             void sendFile(SSL*);
             void getFile(SSL*,char*);
+            void threadFunction(SSL*,int);
 
             //Getters & Setters
             void        setSock(int);
             void        setPort(int);
             void        setUpdate(bool);
             void        setVersion(double);
+            void        setMaxConnections(int);
             void        setCertificatePath(std::string);
             void        setPrivateKeyPath(std::string);
             void        setPrivateCertPath(std::string);
@@ -73,6 +78,8 @@ namespace tlsw{
             int         getSock(void);
             int         getPort(void);
             double      getVersion(void);
+            int         getNumConnections(void);
+            int         getMaxConnections(void);
             bool        isUpdate(void);
             bool        isSetup(void);
             std::string getCertificatePath(void);
@@ -84,7 +91,8 @@ namespace tlsw{
         private:
             int          sock;
             int          port; //required
-            int          numConnections;
+            int          numconnections;
+            int          maxconnections;
             double       version;
             bool         update;
             bool         sslinit;
@@ -95,6 +103,9 @@ namespace tlsw{
             std::string  privatecert;//required
             std::string  filepath;
             SSL_CTX      *ctx;
+            std::mutex   numconnmtx;
+
+            std::vector<std::thread> threads;
     };
 }
 
