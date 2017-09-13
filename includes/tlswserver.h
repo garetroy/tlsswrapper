@@ -66,6 +66,7 @@ namespace tlsw{
             void threadFunction(SSL*,int);
 
             //Getters & Setters
+            void        turnOnTLS(bool);
             void        setSock(int);
             void        setPort(int);
             void        setUpdate(bool);
@@ -82,6 +83,7 @@ namespace tlsw{
             int         getMaxConnections(void);
             bool        isUpdate(void);
             bool        isSetup(void);
+            bool        isTLS(void);
             std::string getCertificatePath(void);
             std::string getPrivateKeyPath(void);
             std::string getPrivateCertPath(void);
@@ -98,9 +100,10 @@ namespace tlsw{
             bool         sslinit;
             bool         configured;
             bool         setup;
-            std::string  certificate; //required
-            std::string  privatekey; //required
-            std::string  privatecert;//required
+            bool         tls; 
+            std::string  certificate; //required for tls
+            std::string  privatekey; //required for tls
+            std::string  privatecert;//required for tls
             std::string  filepath;
             SSL_CTX      *ctx;
             std::mutex   numconnmtx;

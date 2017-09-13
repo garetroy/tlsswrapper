@@ -642,6 +642,12 @@ namespace tlsw{
     } 
 
     void
+    Server::turnOnTLS(bool on)
+    {
+        tls = on;
+    }
+
+    void
     Server::setSock(int socket)
     {
         sock = socket;
@@ -717,6 +723,12 @@ namespace tlsw{
     Server::isSetup(void)
     {
         return setup;
+    }
+
+    bool
+    Server::isTLS(void)
+    {
+        return tls;
     }
 
     std::string 
