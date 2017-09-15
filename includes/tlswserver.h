@@ -22,6 +22,7 @@
 #include <thread>
 #include <vector>
 #include <mutex>
+#include <map>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <openssl/ssl.h>
@@ -64,6 +65,8 @@ namespace tlsw{
             void sendFile(SSL*);
             void getFile(SSL*,char*);
             void threadFunction(SSL*,int);
+            void addFlag(char*,void(*)(void*));
+            void removeFlag(char*);
 
             //Getters & Setters
             void        turnOnTLS(bool);
@@ -76,7 +79,7 @@ namespace tlsw{
             void        setPrivateKeyPath(std::string);
             void        setPrivateCertPath(std::string);
             void        setFilePath(std::string);
-            void        setMainFunction(void(*in)(void));
+            void        setMainFunction(void(*in)(void*));
             int         getSock(void);
             int         getPort(void);
             double      getVersion(void);
@@ -109,9 +112,10 @@ namespace tlsw{
             std::string  filepath;
             SSL_CTX      *ctx;
             std::mutex   numconnmtx;
-            void         (*func)(void);
+            void         (*func)(void*);
 
             std::vector<std::thread> threads;
+            std::map<char*,void(*)(void*)> calls;
     };
 }
 

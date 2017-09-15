@@ -1,7 +1,5 @@
 //NEEDS LOGGING
-//NEEDS MULTITHREADED
-//Needs hashmap (message/function), main loop
-//updating the numConnections (need mutex lock)
+//NEEDS OPTIONAL TLS
 /*
     tlswserver.cxx
     The source file for tlswserver
@@ -509,12 +507,22 @@ namespace tlsw{
             try{
                 //Make sure that below is informed to developers // hashmap here?
                 recieveMessage(ssl,buff);
+
                 if(strcmp(buff,"x001") == 0)
                     sendFile(ssl);
 
+                //check our flags
+                for(auto &i : calls)
+                    if(strcmp(buff,i.first) == 0){
+                        i.second((void*)ssl);
+                        memset(buff,'\0',3000);
+                        continue;
+                    }
+
                 memset(buff,'\0',3000);
+
                 if(funcset)
-                    func();
+                    func((void*)ssl);
 
             } catch (int threadstatus) {
                 numconnmtx.lock();
@@ -526,6 +534,40 @@ namespace tlsw{
                 return;
             }
         }
+    }
+
+    void
+    Server::addFlag(char* flagname,void(*func)(void*))
+    {
+        /*
+            The jist of this function is to add
+            a flag such as "x001" to a function "sendFile"
+            (which is already added by default) to the map named calls.
+            This allows the main loop for the server to check
+            to see if the message matches any flags within the 
+            map, and if so it executes the corresponding function.
+        
+            @params:
+                flagname - (char*) the flag we want to recognize
+                func     - (void(*)(void*)) the function and paramaters
+        
+        */
+
+        calls.insert(std::make_pair(flagname,func));
+    }
+
+    void
+    Server::removeFlag(char* flagname)
+    {
+        /*
+            This function removes the flag from the calls map
+
+            @param:
+                flagname - (char*) the flag we want to remove
+        */
+        for(auto it = calls.begin(); it != calls.end();)
+            if(strcmp(it->first,flagname) == 0)
+                calls.erase(it);
     }
 
     void
@@ -707,7 +749,7 @@ namespace tlsw{
     }
 
     void
-    Server::setMainFunction(void(*in)(void))
+    Server::setMainFunction(void(*in)(void*))
     {
         funcset = true;
         func = in;

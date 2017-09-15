@@ -2,9 +2,17 @@
 #include <tlsw.h>
 
 void
-printme(void)
+printme(void* in)
 {
+    SSL* ssl = (SSL*)in;
     fprintf(stderr,"HERE");
+}
+
+void
+cow(void* in)
+{
+    SSL* ssl = (SSL*) in;
+    fprintf(stderr,"DOGDOGDOGDOG\n");
 }
 
 int main(int argc, char* argv[])
@@ -23,6 +31,7 @@ int main(int argc, char* argv[])
         ourserver.setUpdate(true);
         ourserver.setVersion(0.2);
         ourserver.setMainFunction(printme);
+        ourserver.addFlag("x002",cow);
         ourserver.startServer();
         std::cout << ourserver << std::endl;
     }else if(type == 0){
@@ -36,7 +45,7 @@ int main(int argc, char* argv[])
         ourclient.setVersion(0.2);
         ourclient.startClient();
         std::cout << ourclient << std::endl;
-        ourclient.recieveMessage();
+        ourclient.sendMessage("x002");
     }else if(type == 3){
         //Testing Helper functions
         char buffer[3] = {'\0'};
