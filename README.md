@@ -1,8 +1,9 @@
 **tlswrapper** is a wrapper for basic TCP server/clients (with tls encryption) orignially from c based functions. Allows for more programming efficiency, higher level understanding, and less to program for next time! It provides an interfacing for message passing, checking/sending/recieving updates, adding custom server response phrases(work in prog), adding functions to the main server loop(work in prog), logging(work in progress), and adding functions to the server's runloop(work in progress).
 
 ## Requirements
-    openSSL - 1.0.2k or higher
-    cmake   - 3.6.3  or higher 
+    openSSL  - 1.0.2k or higher
+    cmake    - 3.6.3  or higher 
+    [glogger3](https://github.com/KjellKod/g3log) - Most current
 
 ## Installation
 Go to the build directory then continue with the following commands.
