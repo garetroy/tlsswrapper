@@ -1,4 +1,3 @@
-//NEEDS LOGGING
 //NEEDS OPTIONAL TLS
 /*
     tlswserver.cxx
