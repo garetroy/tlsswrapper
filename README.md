@@ -3,9 +3,9 @@
 ## Requirements
     openSSL  - 1.0.2k or higher
     cmake    - 3.6.3  or higher 
-    glogger3 - Most current
+    glog     - Most current
 
-You can get glogger3 [here](https://github.com/KjellKod/g3log)
+You can get glog [here](https://github.com/google/glog)
 
 ## Installation
 Go to the build directory then continue with the following commands.
