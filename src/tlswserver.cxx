@@ -6,6 +6,7 @@
     Author:
         Garett Roberts
 */
+
 #include <tlswserver.h>
 
 namespace tlsw{
@@ -15,7 +16,7 @@ namespace tlsw{
         privatekey(""), ctx(nullptr), sslinit(false),
         numconnections(0), configured(false), privatecert(""),
         version(0), filepath("./"), maxconnections(5), threads(5),
-        funcset(false)
+        funcset(false), tls(true)
     {}
     
     Server::Server(int port) : port(port), update(false),
@@ -23,7 +24,7 @@ namespace tlsw{
         privatekey(""), ctx(nullptr), sslinit(false),
         numconnections(0),configured(false), privatecert(""),
         version(0), filepath("./"), maxconnections(5), threads(5),
-        funcset(false)
+        funcset(false), tls(true)
     {}
     
     Server::Server(const Server& s) : port(s.port), update(s.update),
@@ -31,7 +32,7 @@ namespace tlsw{
         privatekey(s.privatekey), ctx(nullptr), sslinit(false),
         numconnections(0), configured(false), privatecert(""),
         version(0), filepath("./"), maxconnections(5), threads(5),
-        funcset(false)
+        funcset(false), tls(true)
     {}
 
     Server::~Server(void)
@@ -96,6 +97,8 @@ namespace tlsw{
         maxconnections = rhs.maxconnections;
         func           = rhs.func;
         funcset        = rhs.funcset;
+        calls          = rhs.calls;
+        tls            = rhs.tls;
         
        return *this; 
     } 
@@ -126,7 +129,7 @@ namespace tlsw{
         same = same && (privatekey == s.privatekey) && (privatecert == s.privatecert);
         same = same && (version == s.version) && (filepath == s.filepath);
         same = same && (maxconnections == s.maxconnections) && (funcset == s.funcset);
-        same = same && (func == s.func);
+        same = same && (func == s.func) && (tls == s.tls) && (calls == s.calls);
 
         return same;
     }
@@ -173,7 +176,8 @@ namespace tlsw{
         stream << " certificatePath(" << s.certificate;
         stream << ") privateKeyPath(" << s.privatekey << ")";
         stream << " privateCertPath(" << s.privatecert << ")";
-        stream << " version(" << s.version << ")";
+        stream << " version(" << s.version << ")" << " tls(";
+        stream << s.tls << ")";
         return stream;
     }
 
@@ -184,36 +188,23 @@ namespace tlsw{
 
         int lost = 1;
         if((lost = SSL_read(ssl,in,3001)) < 0){
-            perror("SSL_read failed tlswserver");
-            //exit thread
-            //logging
-            //setcodes
+            PLOG(ERROR) << "SSL_read failed tlswserver";
             throw 0;
         }else if(lost == 0){
-            perror("Connection lost");
-            //exit thread
-            //logging
-            //setcodes
+            PLOG(ERROR) << "Client disconnected, could not get message";
             throw 0;
         } 
-
-        //add time and messages to logs
     } 
 
     void
     Server::sendMessage(SSL* ssl, char* out)
     {
-        //get time, log
         int lost = 0;
         if((lost = SSL_write(ssl, out, std::strlen(out))) < 0){
-            perror("Failed sending tlswserver");
-            //exitthread
-            //needs loggng
-            //needs codes
+            PLOG(ERROR) << "SSL_write failed tlswserver";
             throw 0;
         }else if(lost == 0){
-            perror("Connection lost");
-            //exitthread
+            LOG(INFO) << "Client disconnected, could not send message";
             throw 0;
         }
     }
@@ -221,17 +212,14 @@ namespace tlsw{
     void
     Server::sendMessage(SSL* ssl, std::string out)
     {
-        //get time, log
         const char* newout = out.c_str();
         int lost = 0;
         if((lost = SSL_write(ssl, newout, std::strlen(newout))) < 0){
-            perror("Failed sending tlswserver");
-            //exitthread
-            exit(EXIT_FAILURE);
+            PLOG(ERROR) << "SSL_write failed tlswserver";
+            throw 0;
         }else if(lost == 0){
-            perror("Connection lost");
-            //exitthread
-            exit(EXIT_FAILURE);
+            LOG(INFO) << "Client disconnected, could not send message";
+            throw 0;
         }
     }
 
@@ -255,17 +243,17 @@ namespace tlsw{
         //TCP
         sock = socket(AF_INET,SOCK_STREAM,0);
         if(sock < 0){
-            perror("Cannot create socket tlswserver");
+            PLOG(ERROR) << "tlswserver could not create socket";
             exit(EXIT_FAILURE);
         };
 
         if(bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0){
-            perror("Could not bind tlswserver");
+            PLOG(ERROR) << "tlswserver could not bind to socket";
             exit(EXIT_FAILURE);
         }
 
         if(listen(sock,SOMAXCONN)){
-            perror("Could not listen tlswserver");
+            PLOG(ERROR) << "tlswserver could not listen to the socket";
             exit(EXIT_FAILURE);
         }
         
@@ -310,8 +298,7 @@ namespace tlsw{
         method = SSLv23_server_method();
         ctx    = SSL_CTX_new(method);        
         if(ctx == nullptr){
-            perror("Could not create SSL contex tlswserver");
-            ERR_print_errors_fp(stderr);
+            PLOG(ERROR) << "Could not create SSL contex tlswserver";
             exit(EXIT_FAILURE);
         }
     }
@@ -329,25 +316,25 @@ namespace tlsw{
             initSSL();
 
         if(ctx == nullptr){
-            std::cerr << "Context was not created for server" << std::endl;
+            PLOG(ERROR) << "Context was not declared for server";
             exit(EXIT_FAILURE);
         }
 
         std::ifstream cert(certificate);
         if(!cert){
-            std::cerr << "Certificate path invalid" << std::endl; 
+            PLOG(ERROR) << "Certificate path invalid tlswserver";
             exit(EXIT_FAILURE);
         }
 
         std::ifstream privk(privatekey);
         if(!privk){
-            std::cerr << "Privatekey path invalid" << std::endl; 
+            PLOG(ERROR) << "Privatekey path invalid tlswserver";
             exit(EXIT_FAILURE);
         }
 
         std::ifstream privcert(privatecert);
         if(!privcert){
-            std::cerr << "PrivateCert path invalid" << std::endl; 
+            PLOG(ERROR) << "PrivateCert path invalid tlswserver";
             exit(EXIT_FAILURE);
         }
 
@@ -384,6 +371,10 @@ namespace tlsw{
             are loaded up and you don't have anything in paticular
             you want to setup
         */
+
+        //Setup Logger
+        FLAGS_log_dir = filepath;
+        google::InitGoogleLogging("serverlog");
         initSSL();
         createContext();
         configureContext();
@@ -410,12 +401,12 @@ namespace tlsw{
         if(sslcert){
             long verifyresult = SSL_get_verify_result(ssl);
             if(verifyresult != X509_V_OK){
-                std::cerr << "Certificate Verify Failed\n"; 
+                PLOG(ERROR) << "Certificate Verify Failed"; 
                 success = false;
             }
             X509_free(sslcert);             
         }else{
-            std::cerr << "There is no client certificate\n";
+            LOG(ERROR) << "There is no client certificate";
             success = false;
         }
         return success;
@@ -448,6 +439,7 @@ namespace tlsw{
                             &len);
             if(client < 0){
                 perror("Could not accept client tlswserver");
+                PLOG(ERROR) << "Could not accept client tlswserver";
                 exit(EXIT_FAILURE);
             }
 
@@ -458,7 +450,8 @@ namespace tlsw{
             }
             
             if(!verifyPeer(ssl))
-                std::cerr << "Verifying failed\n";
+                LOG(ERROR) << "Verifying ssl failed tlswserver";
+                exit(EXIT_FAILURE);
 
             checkUpdate(ssl);
         
@@ -467,22 +460,21 @@ namespace tlsw{
             bool status = (maxconnections == numconnections);
             numconnmtx.unlock();
             while(status){
-                //log
                 sleep(1);
                 numconnmtx.lock();
                 status = (maxconnections == numconnections);
-                numconnmtx.lock();
+                numconnmtx.unlock();
             }
 
-            //log
             //NEEDS TO CHECK IF THREAD IS STILL RUNNING, needs to send client as well
+            LOG(INFO) << "Starting new client connections";
             threads[numconnections] = std::thread(&Server::threadFunction,this,ssl,client);
             threads[numconnections].detach();
 
             numconnmtx.lock();
             numconnections++;
+            LOG(INFO) << "Number of connections is now " << numconnections;
             numconnmtx.unlock();
-            
         }
     }
 
@@ -499,14 +491,12 @@ namespace tlsw{
             @params:
                 ssl - (SSL*) the ssl connection correlated to this thread
         */
-        numconnmtx.lock();
-        std::cerr << numconnections << std::endl;
-        numconnmtx.unlock();
         char buff[3000] = {'\0'};
         while(1){
             try{
                 //Make sure that below is informed to developers // hashmap here?
                 recieveMessage(ssl,buff);
+                LOG(INFO) << "Got message: " << buff;
 
                 if(strcmp(buff,"x001") == 0)
                     sendFile(ssl);
@@ -527,8 +517,8 @@ namespace tlsw{
             } catch (int threadstatus) {
                 numconnmtx.lock();
                 numconnections--;
+                LOG(INFO) << "Number of connections is now " << numconnections;
                 numconnmtx.unlock();
-                //checkthreadstatus log
                 SSL_free(ssl);
                 close(client);
                 return;
@@ -584,15 +574,15 @@ namespace tlsw{
 
         char filename[2048] = {'\0'};
         recieveMessage(ssl,filename);
-        //change to cerr(eventually logging?)
-        fprintf(stderr,"Sending file %s...\n",filename);
+        LOG(INFO) << "Sending file " << filename;
+        
 
         char* path = prePend(filepath.c_str(),filename);
 
         //Checking path
         std::ifstream desiredfile(path);
         if(!desiredfile){
-            std::cerr << "Desired path " << path << " invalid" << std::endl; 
+            LOG(ERROR) << "The set path is invalid";
             exit(EXIT_FAILURE);
         }
 
@@ -628,6 +618,8 @@ namespace tlsw{
                 ssl      - (SSL*) the ssl connection we want to send to
         */
 
+        LOG(INFO) << "Sending file: " << filename;
+
         sendMessage(ssl,filename);
 
         FILE* fp;
@@ -640,7 +632,7 @@ namespace tlsw{
 
         fp = fopen(path,"w+");
         if(fp == nullptr){
-            perror("Failed to open file tlswclient");
+            PLOG(ERROR) << "Failed to open file for sending tlswclient";
             exit(EXIT_FAILURE);
         }
 
@@ -654,7 +646,7 @@ namespace tlsw{
             return;
         }else if(bytesrecieved < 0){
             fclose(fp);
-            perror("Read error tlswclient");
+            PLOG(ERROR) << "Read error tlswclient";
             exit(EXIT_FAILURE); 
         }
 
@@ -686,7 +678,7 @@ namespace tlsw{
         if(!update)
             return;
 
-        fprintf(stderr, "Checking for update..\n");
+        LOG(INFO) << "Checking for update with client";
         char vers[4] = {'\0'};
         snprintf(vers, sizeof(vers), "%f", version);
         sendMessage(ssl,vers);

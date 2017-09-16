@@ -4,12 +4,17 @@
     Author:
         Garett Roberts
 
-    This is a wrapper for a TCP/TLS server (originall written in c) that will provide basic functionality/deployment of a TCP/TLS server without much hassle and using c++. There are a few options when setting up the server, which will be explained in the docs, or the individual functions will also be explained in the source file.
+    This is a wrapper for a TCP/TLS server (originall written in c) that will 
+    provide basic functionality/deployment of a TCP/TLS server without much 
+    hassle and using c++. There are a few options when setting up the server,
+    which will be explained in the docs, or the individual functions will 
+    also be explained in the source file.
 
     IMPORTANT:
         All elemnts that are marked required must be set before
         attempting to run the server.
 */
+
 #ifndef _TLSWSERVER_H_
 #define _TLSWSERVER_H_
 
@@ -28,6 +33,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+#include <glog/logging.h>
 #include <tlsw.h>
 
 namespace tlsw{
