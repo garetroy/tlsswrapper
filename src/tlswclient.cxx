@@ -1,7 +1,7 @@
 //NEEDS LOGGING
 /*
     tlswclient.cxx
-    The source file for tlswserver
+    The source file for tlswclient
     Author:
         Garett Roberts
 
@@ -176,7 +176,7 @@ namespace tlsw{
         clearBuffer();
 
         if(SSL_read(ssl,buffer,buffsize) <= 0){
-            perror("SSL_read failed tlswclient");
+            LOG(ERROR) << "SSL_read failed tlswclient";
             exit(EXIT_FAILURE);
         }
     }
@@ -193,7 +193,7 @@ namespace tlsw{
                 in - (char*) the message we want to send
         */
         if(std::strlen(in) > buffsize){
-            std::cerr << "Trying to send a message bigger than buffer size\n";
+            LOG(ERROR) << "Trying to send a message bigger than buffer size";
             exit(EXIT_FAILURE);
         }
 
@@ -201,7 +201,7 @@ namespace tlsw{
         strcpy(buffer,in);
 
         if(SSL_write(ssl,buffer,buffsize) <= 0){
-            perror("SSL_write failed tlswclient");
+            LOG(ERROR) << "SSL_write failed tlswclient";
             exit(EXIT_FAILURE);
         } 
     }
@@ -219,7 +219,7 @@ namespace tlsw{
         */
         const char* newin = in.c_str();
         if(std::strlen(newin) > buffsize){
-            std::cerr << "Trying to send a message bigger than buffer size\n";
+            LOG(ERROR) << "Trying to send a message bigger than buffer size";
             exit(EXIT_FAILURE);
         }
 
@@ -227,7 +227,7 @@ namespace tlsw{
         strcpy(buffer,newin);
 
         if(SSL_write(ssl,buffer,buffsize) <= 0){
-            perror("SSL_write failed tlswclient");
+            LOG(ERROR) << "SSL_write failed tlswclient";
             exit(EXIT_FAILURE);
         } 
     }
@@ -245,7 +245,7 @@ namespace tlsw{
         
         if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         {
-            perror("Could not create socket tlswclient");
+            PLOG(ERROR) << "Could not create socket";
             exit(EXIT_FAILURE);
         }
 
@@ -257,7 +257,7 @@ namespace tlsw{
     
         if(connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0)
         {
-            perror("Connection failed");
+            PLOG(ERROR) << "Connection failed";
             exit(1);
         }
     }
@@ -295,19 +295,19 @@ namespace tlsw{
         //checking existance of files
         std::ifstream cert(certificate);
         if(!cert){
-            std::cerr << "Certificate path invalid" << std::endl; 
+            LOG(ERROR) << "Certificate path invalid";
             exit(EXIT_FAILURE);
         }
 
         std::ifstream privk(privatekey);
         if(!privk){
-            std::cerr << "Privatekey path invalid" << std::endl; 
+            LOG(ERROR) << "Private key invalid";
             exit(EXIT_FAILURE);
         }
 
         std::ifstream privcert(privatecert);
         if(!privcert){
-            std::cerr << "PrivateCert path invalid" << std::endl; 
+            LOG(ERROR) << "PrivateCert path invalid";
             exit(EXIT_FAILURE);
         }
 
@@ -328,7 +328,7 @@ namespace tlsw{
         }
     
         if(SSL_CTX_check_private_key(ctx) != 1){
-            std::cerr << "Private and certificate is not matching\n";
+            LOG(ERROR) << "Private and certificate is not matching"; 
             exit(EXIT_FAILURE);
         }
         
@@ -356,12 +356,12 @@ namespace tlsw{
         if(sslcert){
             long verifyresult = SSL_get_verify_result(ssl);
             if(verifyresult != X509_V_OK){
-                std::cerr << "Certificate Verify Failed\n"; 
+                LOG(ERROR) << "Certificate Verification Failed";
                 success = false;
             }
             X509_free(sslcert);             
         }else{
-            std::cerr << "There is no client certificate\n";
+            LOG(ERROR) << "There is no client certificate";
             success = false;
         }
         return success;         
@@ -374,6 +374,8 @@ namespace tlsw{
             This is going to be the default steps that we call when
             setting up a client.
         */
+        FLAGS_log_dir = filepath;
+        google::InitGoogleLogging("clientlog");
         initSSL();
         configureContext();
         createSocket();
@@ -395,7 +397,7 @@ namespace tlsw{
 
         ssl = SSL_new(ctx);
         if(!ssl){
-            std::cerr << "SSL_new failed tlswclient\n";
+            LOG(ERROR) << "SSL_new failed";
             exit(EXIT_FAILURE);
         }
 
@@ -403,13 +405,12 @@ namespace tlsw{
         
         if((ret = SSL_connect(ssl)) != 1)
         {
-            std::cerr << "Handshake Error " <<  SSL_get_error(ssl, ret);
-            std::cerr << std::endl;
+            LOG(ERROR) << "Handshake Error " << SSL_get_error(ssl, ret);
             exit(EXIT_FAILURE);
         }
 
         if(!verifyPeer()){
-            std::cerr << "Verifying failed\n";
+            LOG(ERROR) << "Verification failed";
             exit(EXIT_FAILURE);
         }
 
@@ -428,14 +429,14 @@ namespace tlsw{
         recieveMessage();
          
         //change to cerr(eventually logging?)
-        fprintf(stderr,"Sending file %s...\n",buffer);
+        LOG(INFO) << "Sending file: " << buffer;
 
         char* path = prePend(filepath.c_str(),buffer);
 
         //Checking path
         std::ifstream desiredfile(path);
         if(!desiredfile){
-            std::cerr << "Desired path " << path << " invalid" << std::endl; 
+            LOG(ERROR) << "Desired path " << path << " is invalid";
             exit(EXIT_FAILURE);
         }
 
@@ -477,6 +478,8 @@ namespace tlsw{
         sendMessage("x001\0");
         sendMessage(filename);
 
+        LOG(INFO) << "Retriving file " << filename;
+
         FILE *fp;
         int bytesrecieved  = 0;
         int left           = 0;
@@ -486,7 +489,7 @@ namespace tlsw{
 
         fp = fopen(path,"w+");
         if(fp == nullptr){
-            perror("Failed to open file tlswclient");
+            PLOG(ERROR) << "Failed to open file";
             exit(EXIT_FAILURE);
         }
 
@@ -500,7 +503,7 @@ namespace tlsw{
             return;
         }else if(bytesrecieved < 0){
             fclose(fp);
-            perror("Read error tlswclient");
+            PLOG(ERROR) << "File read error";
             exit(EXIT_FAILURE); 
         }
 
@@ -526,14 +529,16 @@ namespace tlsw{
         if(!update)
             return;
 
+        LOG(INFO) << "Checking for update";
+
         char vers[4] = {'\0'};
         snprintf(vers, sizeof(vers), "%f", version);
     
         recieveMessage();      
-        fprintf(stderr,"Version number: %s, Ours: %s\n",buffer,vers);
+        LOG(INFO) << "Client version number: " << vers << " Newest version: " << buffer;
         if(strcmp(buffer,vers) != 0){
 
-            fprintf(stderr,"Patching...\n");
+            LOG(INFO) << "Patching...";
             int error = 0;
             getFile("patch");
     
@@ -542,13 +547,13 @@ namespace tlsw{
             char* temp = prePend("chmod +x ",path);
             if(system(temp) < 0)
             {
-                perror("System call failed, check permissions");
+                PLOG(ERROR) << "System call failed, check permissions for chmod";
                 error = 1;
             } 
             
             if(system(path) < 0)
             {
-                perror("System couldn't execute patch");
+                PLOG(ERROR) << "System coudln't execute patch";
                 error = 1;
             } 
 
@@ -562,7 +567,7 @@ namespace tlsw{
             if(error == 1)
                 exit(EXIT_FAILURE);
 
-            fprintf(stderr,"Patched!\n");
+            PLOG(INFO) << "Patched!";
             exit(EXIT_SUCCESS);
         }
     }
