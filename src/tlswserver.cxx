@@ -437,7 +437,6 @@ namespace tlsw{
             int client = accept(sock, (struct sockaddr*)&addr,
                             &len);
             if(client < 0){
-                perror("Could not accept client tlswserver");
                 PLOG(ERROR) << "Could not accept client tlswserver";
                 exit(EXIT_FAILURE);
             }
@@ -450,7 +449,7 @@ namespace tlsw{
             
             if(!verifyPeer(ssl))
                 LOG(ERROR) << "Verifying ssl failed tlswserver";
-                exit(EXIT_FAILURE);
+                continue;
 
             checkUpdate(ssl);
         
