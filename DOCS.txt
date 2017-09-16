@@ -1,0 +1,52 @@
+This is the documentation for tlswrapper. Tlswrapper is a wrapper for tls based connections
+between a client and a server. The purpose of this wrapper is to make it easier for people
+to program a c++ server that supports tls without having to worry about all the nitty gritty.
+It is important to know that this is a supplamentary guide to the docstrings within the acutal
+*.cxx code. 
+
+Author: Garett Roberts
+
+--TLSW SERVER--
+
+recieveMessage retrives a message and populates the char* in with the message.
+It throws 0 for any type of error, fatal or not. This is for control flow
+and thread exiting within the threadedFunction method.
+
+sendMessage sends the given string(or char*) and sends it via the ssl connection.
+It will throw 0 for any error type like recieveMessage. 
+
+createSocket is just setting up the socket's connection for the server. This is 
+required for all tcp based connections.
+
+All ssl based calls is for verifying or preparing the ssl connection.
+
+startServer is where we get a bit advanced. Here we check to see if it is setup, which
+by default will always not be setup (so that the default setup will be kicked in).
+After we accept the client, create a ssl connection, verify the ssl, then check for 
+an update (if updates are turned on). we then check to see if we are at max capacity
+for connections, and if we are, we make the client wait (and the server) until we can 
+see that one of the connections has disconnected. Once that is so, we start a new thread
+with the threadFunction.
+
+threadFunction will be what every thread of the server will execute with the client.
+It sit's there waiting for a message from the ssl connection of the corresponding client.
+Once it recieves a messge it checks to see if the client is requesting a file, if not
+it checks all of the flags that are within the calls map. If there is a match it calls that
+function. Then it will clear the buffer, and call the given function that runs every time
+the while loop is called if the function is set. If the client disconnects, which is detected
+by the send or recieve message. it will decrement the numconnections and clean up a bit.
+
+checkUpdate sends the client the current version of the client. Then the client does all of the logic
+beyond that point.
+
+--TLSW CLIENT--
+
+The client uses the same buffer for all communication with the server. It makes it a bit easier for
+memory managment and it's size can be set with setBuffsize. 
+
+All ssl functions are for checking, preparing, or creating an ssl connection.
+
+checkUpdate gets a message from the server. That message contains the newest version of the client, if
+the current client's version does not match up, it will request the patch script that will be
+made executable, then ran, lastly being deleted. 
+
