@@ -16,7 +16,7 @@ namespace tlsw{
                             configured(false), setup(false), certificate(""),
                             privatekey(""), privatecert(""), ctx(nullptr), ip(""),
                             connected(false), ssl(nullptr), buffsize(2048),
-                            version(0), filepath("./")
+                            version(0), filepath("./"), tls(true)
     {
         buffer = (char*) new char[buffsize];
         clearBuffer();
@@ -26,7 +26,7 @@ namespace tlsw{
                             configured(false), setup(false), certificate(""),
                             privatekey(""), privatecert(""), ctx(nullptr), 
                             ip(ip), connected(false),ssl(nullptr),buffsize(2048),
-                            version(0), filepath("./")
+                            version(0), filepath("./"), tls(true)
     {
         buffer = (char*) new char[buffsize];
         clearBuffer();
@@ -37,7 +37,7 @@ namespace tlsw{
                             certificate(c.certificate), privatekey(c.privatekey),
                             ctx(nullptr), ip(c.ip), connected(c.connected),
                             ssl(nullptr), buffsize(c.buffsize), version(0),
-                            filepath("./")
+                            filepath("./"), tls(true)
     {
         buffer = (char*) new char[buffsize];
         clearBuffer();
@@ -48,11 +48,13 @@ namespace tlsw{
         if(ctx != nullptr)
             SSL_CTX_free(ctx);
 
-        EVP_cleanup();
+        if(tls){
+            EVP_cleanup();
+            SSL_shutdown(ssl);
+            SSL_free(ssl);
+        }
 
         close(sock);
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
         delete buffer;
     }
 
@@ -96,6 +98,7 @@ namespace tlsw{
         ssl         = nullptr;
         version     = rhs.version;
         filepath    = rhs.filepath;
+        tls         = rhs.tls;
         
         return *this;
     }
@@ -124,7 +127,7 @@ namespace tlsw{
         same = same && (update == c.update) && (certificate == c.certificate);
         same = same && (ip == c.ip) && (privatekey == c.privatekey);
         same = same && (privatecert == c.privatecert) && (version == c.version);
-        same = same && (filepath == c.filepath);
+        same = same && (filepath == c.filepath) && (tls == c.tls);
         
         return same;
     }
@@ -160,7 +163,7 @@ namespace tlsw{
         */
         stream << "The client is connected(" << c.connected;
         stream << ") to port(" << c.port << ") at " << c.ip;
-        stream << " version(" << c.version << ")";
+        stream << " version(" << c.version << ") tls(" << c.tls << ")";
         
         return stream;
     } 
@@ -175,9 +178,16 @@ namespace tlsw{
 
         clearBuffer();
 
-        if(SSL_read(ssl,buffer,buffsize) <= 0){
-            LOG(ERROR) << "SSL_read failed tlswclient";
-            exit(EXIT_FAILURE);
+        if(tls){
+            if(SSL_read(ssl,buffer,buffsize) <= 0){
+                LOG(ERROR) << "SSL_read failed tlswclient";
+                exit(EXIT_FAILURE);
+            }
+        }else{
+            if(recv(sock, buffer, buffsize, 0) < 0){
+                LOG(ERROR) << "Recv failed";
+                exit(EXIT_FAILURE);
+            }
         }
     }
 
@@ -200,10 +210,17 @@ namespace tlsw{
         clearBuffer();
         strcpy(buffer,in);
 
-        if(SSL_write(ssl,buffer,buffsize) <= 0){
-            LOG(ERROR) << "SSL_write failed tlswclient";
-            exit(EXIT_FAILURE);
-        } 
+        if(tls){
+            if(SSL_write(ssl,buffer,buffsize) <= 0){
+                LOG(ERROR) << "SSL_write failed";
+                exit(EXIT_FAILURE);
+            }
+        }else{
+            if(send(sock,buffer,buffsize,0) < 0){
+                LOG(ERROR) << "Failed to send data"; 
+                exit(EXIT_FAILURE);
+            }
+        }
     }
 
     void
@@ -226,10 +243,17 @@ namespace tlsw{
         clearBuffer();
         strcpy(buffer,newin);
 
-        if(SSL_write(ssl,buffer,buffsize) <= 0){
-            LOG(ERROR) << "SSL_write failed tlswclient";
-            exit(EXIT_FAILURE);
-        } 
+        if(tls){
+            if(SSL_write(ssl,buffer,buffsize) <= 0){
+                LOG(ERROR) << "SSL_write failed tlswclient";
+                exit(EXIT_FAILURE);
+            }
+        }else{
+            if(send(sock,buffer,buffsize,0) < 0){
+                LOG(ERROR) << "Failed to send data"; 
+                exit(EXIT_FAILURE);
+            }
+        }
     }
 
     void
@@ -376,8 +400,12 @@ namespace tlsw{
         */
         FLAGS_log_dir = filepath;
         google::InitGoogleLogging("clientlog");
-        initSSL();
-        configureContext();
+
+        if(tls){
+            initSSL();
+            configureContext();
+        }
+
         createSocket();
     }
 
@@ -395,23 +423,24 @@ namespace tlsw{
         if(!setup)
             defaultSetup();
 
-        ssl = SSL_new(ctx);
-        if(!ssl){
-            LOG(ERROR) << "SSL_new failed";
-            exit(EXIT_FAILURE);
-        }
+        if(tls){
+            ssl = SSL_new(ctx);
+            if(!ssl){
+                LOG(ERROR) << "SSL_new failed";
+                exit(EXIT_FAILURE);
+            }
 
-        SSL_set_fd(ssl, sock);
+            SSL_set_fd(ssl, sock);
         
-        if((ret = SSL_connect(ssl)) != 1)
-        {
-            LOG(ERROR) << "Handshake Error " << SSL_get_error(ssl, ret);
-            exit(EXIT_FAILURE);
-        }
+            if((ret = SSL_connect(ssl)) != 1){
+                LOG(ERROR) << "Handshake Error " << SSL_get_error(ssl, ret);
+                exit(EXIT_FAILURE);
+            }
 
-        if(!verifyPeer()){
-            LOG(ERROR) << "Verification failed";
-            exit(EXIT_FAILURE);
+            if(!verifyPeer()){
+                LOG(ERROR) << "Verification failed";
+                exit(EXIT_FAILURE);
+            }
         }
 
         checkUpdate();
@@ -507,11 +536,21 @@ namespace tlsw{
             exit(EXIT_FAILURE); 
         }
 
-        while(((left > 0) && (len = SSL_read(ssl,buffer,256))) > 0)
-        {
-            fwrite(buffer, sizeof(char), len, fp);
-            left -= len;
-            clearBuffer();
+        if(tls){
+            while(((left > 0) && (len = SSL_read(ssl,buffer,256))) > 0)
+            {
+                fwrite(buffer, sizeof(char), len, fp);
+                left -= len;
+                clearBuffer();
+            }
+        }else{
+
+            while(((left > 0) && (len = recv(sock,buffer, 256, 0)) > 0))
+            {
+                fwrite(buffer, sizeof(char), len, fp);
+                left -= len;
+                clearBuffer();
+            }
         }
 
         fclose(fp);
@@ -585,6 +624,12 @@ namespace tlsw{
     }
 
     void
+    Client::setTLS(bool in)
+    {
+        tls = in;
+    }
+
+    void
     Client::setBuffsize(int b)
     {
         buffsize = b;
@@ -650,6 +695,12 @@ namespace tlsw{
     Client::getPort(void)
     {
         return port;
+    }
+
+    bool
+    Client::getTLS(void)
+    {
+        return tls;
     }
     
     int

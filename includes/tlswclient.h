@@ -66,6 +66,7 @@ namespace tlsw{
             void        setSock(int);
             void        setPort(int);
             void        setBuffsize(int);
+            void        setTLS(bool);
             void        clearBuffer(void);
             void        setIP(std::string);
             void        setUpdate(bool);
@@ -76,6 +77,7 @@ namespace tlsw{
             void        setFilePath(std::string);
             int         getSock(void);
             int         getPort(void);
+            bool        getTLS(void);
             int         getBuffsize(void);
             char*       getBuffer(void);
             std::string getIP(void);
@@ -98,6 +100,7 @@ namespace tlsw{
             bool        connected;
             char*       buffer;
             int         buffsize;
+            bool        tls;
             std::string ip; //required
             std::string certificate; //required
             std::string privatekey; //required
