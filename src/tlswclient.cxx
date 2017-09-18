@@ -1,4 +1,3 @@
-//NEEDS LOGGING
 /*
     tlswclient.cxx
     The source file for tlswclient
@@ -264,9 +263,6 @@ namespace tlsw{
             to the socket. It requires that the ip and port are filled out 
             and there is a listning server.
         */
-        if(!configured)
-            configureContext();
-        
         if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         {
             PLOG(ERROR) << "Could not create socket";

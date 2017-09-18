@@ -1,4 +1,3 @@
-//NEEDS OPTIONAL TLS
 /*
     tlswserver.cxx
     The source file for tlswserver
