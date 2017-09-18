@@ -4,14 +4,14 @@
 void
 printme(void* in)
 {
-    SSL* ssl = (SSL*)in;
+    tlsw::clientcresidentials* items = in;
     fprintf(stderr,"HERE");
 }
 
 void
 cow(void* in)
 {
-    SSL* ssl = (SSL*) in;
+    tlsw::clientcresidentials* items = in;
     fprintf(stderr,"DOGDOGDOGDOG\n");
 }
 
