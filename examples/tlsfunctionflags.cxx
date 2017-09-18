@@ -1,17 +1,20 @@
+/*
+    This program shows you how to add a corresponding flag.
+*/
 #include <openssl/ssl.h>
 #include <tlsw.h>
 
 void
 printme(void* in)
 {
-    SSL* ssl = (SSL*)in;
+    tlsw::clientcresidentials* items = in;
     fprintf(stderr,"HERE");
 }
 
 void
 cow(void* in)
 {
-    SSL* ssl = (SSL*) in;
+    tlsw::clientcresidentials* items = in;
     fprintf(stderr,"DOGDOGDOGDOG\n");
 }
 

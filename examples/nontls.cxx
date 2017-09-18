@@ -1,3 +1,6 @@
+/*
+    This script shows you how to do a nontls communication
+*/
 #include <openssl/ssl.h>
 #include <tlsw.h>
 
