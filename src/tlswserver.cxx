@@ -252,7 +252,7 @@ namespace tlsw{
     }
 
     void
-    Server::createSocket()
+    Server::createSocket(void)
     {
         /*
             Creates the main socket
@@ -410,8 +410,8 @@ namespace tlsw{
     Server::verifyPeer(SSL* ssl)
     {
         /*
-            This function verifies the ssl connections certificates
-            and returns true if verified.
+            This is used to verify the peer by passing their c by passing their corresponding
+            certificates.
 
             @param:
                 ssl - (SSL*) the ssl session.
@@ -423,8 +423,10 @@ namespace tlsw{
         
         X509 *sslcert = nullptr;
         sslcert = SSL_get_peer_certificate(ssl);
+        //checks if sslcert is successful
         if(sslcert){
             long verifyresult = SSL_get_verify_result(ssl);
+            //if this is returned, no certificate was presented
             if(verifyresult != X509_V_OK){
                 PLOG(ERROR) << "Certificate Verify Failed"; 
                 success = false;
@@ -518,7 +520,8 @@ namespace tlsw{
             iteration of the while loop.
 
             @params:
-                ssl - (SSL*) the ssl connection correlated to this thread
+                cres - (clientcresidentials) the connection correlated to 
+                this thread 
         */
         char buff[3000] = {'\0'};
         while(1){
@@ -590,7 +593,7 @@ namespace tlsw{
     }
 
     void
-    Server::sendFile(clientcresidentials *cres)
+    Server::sendFile(clientcresidentials* cres)
     {
         /*
             Gets the filename that is desired and then
@@ -598,7 +601,8 @@ namespace tlsw{
     
 
             @param:
-                ssl - (SSL*) the ssl connection we want to interact with
+                clientcresidentials - (cres*) the connection we want to 
+                interact with
         */
 
         char filename[2048] = {'\0'};
@@ -644,7 +648,9 @@ namespace tlsw{
         
             @param:
                 filename - (char*) the name of the file we want from the client
-                ssl      - (SSL*) the ssl connection we want to send to
+                cres     - (clientcresidentials*) the ssl connection we want 
+                            to send to
+
         */
 
         LOG(INFO) << "Sending file: " << filename;
@@ -703,7 +709,7 @@ namespace tlsw{
     }
 
     void
-    Server::checkUpdate(clientcresidentials *cres)
+    Server::checkUpdate(clientcresidentials* cres)
     {
         /*
             This will check with the client for updates.
@@ -712,7 +718,7 @@ namespace tlsw{
                 updates on.
 
             @param:
-                ssl - (SSL*) the ssl session we want to check
+                clientcresidentials  - (cres*) the ssl session we want to check
         */
 
         if(!update)
