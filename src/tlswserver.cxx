@@ -679,12 +679,23 @@ namespace tlsw{
             exit(EXIT_FAILURE); 
         }
 
-        while(((left > 0) && (len = SSL_read(cres->ssl,buffer,256))) > 0)
-        {
-            fwrite(buffer, sizeof(char), len, fp);
-            left -= len;
-            memset(buffer,'\0',3000);
+        if(tls){
+            while(((left > 0) && (len = SSL_read(cres->ssl,buffer,256))) > 0)
+            {
+                fwrite(buffer, sizeof(char), len, fp);
+                left -= len;
+                memset(buffer,'\0',3000);
+            }
+        }else{
+
+            while(((left > 0) && (len = recv(cres->sock,buffer, 256, 0)) > 0))
+            {
+                fwrite(buffer, sizeof(char), len, fp);
+                left -= len;
+                memset(buffer,'\0',3000);
+            }
         }
+
 
         fclose(fp);
         free(path);

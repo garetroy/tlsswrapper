@@ -367,14 +367,17 @@ namespace tlsw{
     Client::verifyPeer(void)
     {
         /*
-            This is used to verify the peer with the given certificates.
+            This is used to verify the peer by passing their corresponding
+            certificates.
         */
         bool success = true;
         
         X509 *sslcert = nullptr;
         sslcert = SSL_get_peer_certificate(ssl);
+        //checks if sslcert is successful
         if(sslcert){
             long verifyresult = SSL_get_verify_result(ssl);
+            //if this is returned, no certificate was presented
             if(verifyresult != X509_V_OK){
                 LOG(ERROR) << "Certificate Verification Failed";
                 success = false;

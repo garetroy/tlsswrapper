@@ -39,6 +39,10 @@
 namespace tlsw{
     
     typedef struct{
+        /*
+            This struct is used to pass around clients
+            cresidentials to different methods
+        */
         SSL* ssl;
         int sock;
     }clientcresidentials;
@@ -47,7 +51,7 @@ namespace tlsw{
         
         public:
             Server(void);
-            Server(int);  //needs: Own debug streams, mutexlock for streams
+            Server(int);
             Server(const Server&);            
             ~Server(void);
 
