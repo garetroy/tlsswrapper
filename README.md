@@ -1,4 +1,4 @@
-**tlswrapper** is a wrapper for basic TCP server/clients (with tls encryption) orignially from c based functions. Allows for more programming efficiency, higher level understanding, and less to program for next time! It provides an interfacing for message passing, checking/sending/recieving updates, adding custom server response phrases, adding functions to the main server loop, logging, and adding functions to the server's runloop.
+**tlswrapper** is a wrapper for basic TCP server/clients (with tls encryption) orignially from c based functions. Allows for more programming efficiency, higher level understanding, and less to program for next time! It provides an interfacing for message passing, checking/sending/recieving updates, adding custom server response phrases, adding functions to the main server loop, logging, making tls security optional, and adding functions to the server's runloop.
 
 ## Requirements
     openSSL  - 1.0.2k or higher
