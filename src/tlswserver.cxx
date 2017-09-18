@@ -498,9 +498,12 @@ namespace tlsw{
             }
 
             //NEEDS TO CHECK IF THREAD IS STILL RUNNING, needs to send client as well
-            LOG(INFO) << "Starting new client connections";
-            threads[numconnections] = std::thread(&Server::threadFunction,this,cres);
-            threads[numconnections].detach();
+            for(int i = 0; i < maxconnections; i++)
+                if(threads[i].joinable()){
+                    LOG(INFO) << "Starting new client connections";
+                    threads[numconnections] = std::thread(&Server::threadFunction,this,cres);
+                    threads[numconnections].detach();
+                }
 
             numconnmtx.lock();
             numconnections++;
