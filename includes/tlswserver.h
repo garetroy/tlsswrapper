@@ -38,6 +38,11 @@
 
 namespace tlsw{
     
+    typedef struct{
+        SSL* ssl;
+        int sock;
+    }clientcresidentials;
+
     class Server{
         
         public:
@@ -57,25 +62,25 @@ namespace tlsw{
                         const Server&);
 
             //Helper functions
-            void recieveMessage(SSL*,char*);
-            void sendMessage(SSL*,char*);
-            void sendMessage(SSL*,std::string);
+            void recieveMessage(clientcresidentials*,char*);
+            void sendMessage(clientcresidentials*,char*);
+            void sendMessage(clientcresidentials*,std::string);
             void createSocket(void); 
             void initSSL(void);
             void createContext(void); 
             void configureContext(void);
-            void checkUpdate(SSL*);
+            void checkUpdate(clientcresidentials*);
             void defaultSetup(void);
             bool verifyPeer(SSL*);
             void startServer(void);
-            void sendFile(SSL*);
-            void getFile(SSL*,char*);
-            void threadFunction(SSL*,int);
+            void sendFile(clientcresidentials*);
+            void getFile(clientcresidentials*,char*);
+            void threadFunction(clientcresidentials);
             void addFlag(char*,void(*)(void*));
             void removeFlag(char*);
 
             //Getters & Setters
-            void        turnOnTLS(bool);
+            void        setTLS(bool);
             void        setSock(int);
             void        setPort(int);
             void        setUpdate(bool);
@@ -120,8 +125,8 @@ namespace tlsw{
             std::mutex   numconnmtx;
             void         (*func)(void*);
 
-            std::vector<std::thread> threads;
-            std::map<char*,void(*)(void*)> calls;
+            std::vector<std::thread>        threads;
+            std::map<char*,void(*)(void*)>  calls;
     };
 }
 

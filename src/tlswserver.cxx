@@ -181,45 +181,75 @@ namespace tlsw{
     }
 
     void
-    Server::recieveMessage(SSL* ssl, char* in)
+    Server::recieveMessage(clientcresidentials *cres, char* in)
     {
         memset(in,'\0',std::strlen(in));
 
         int lost = 1;
-        if((lost = SSL_read(ssl,in,3001)) < 0){
-            PLOG(ERROR) << "SSL_read failed tlswserver";
-            throw 0;
-        }else if(lost == 0){
-            PLOG(ERROR) << "Client disconnected, could not get message";
-            throw 0;
-        } 
+        if(cres->ssl != nullptr){
+            if((lost = SSL_read(cres->ssl,in,3001)) < 0){
+                PLOG(ERROR) << "SSL_read failed tlswserver";
+                throw 0;
+            }else if(lost == 0){
+                PLOG(ERROR) << "Client disconnected, could not get message";
+                throw 0;
+            } 
+        }else{
+            if((lost = recv(cres->sock,in,3001,0)) < 0){
+                PLOG(ERROR) << "recv failed tlswserver";
+                throw 0;
+            }else if(lost == 0){
+                PLOG(ERROR) << "Client disconnected, could not get message";
+                throw 0;
+            }
+        }
     } 
 
     void
-    Server::sendMessage(SSL* ssl, char* out)
+    Server::sendMessage(clientcresidentials *cres, char* out)
     {
         int lost = 0;
-        if((lost = SSL_write(ssl, out, std::strlen(out))) < 0){
-            PLOG(ERROR) << "SSL_write failed tlswserver";
-            throw 0;
-        }else if(lost == 0){
-            LOG(INFO) << "Client disconnected, could not send message";
-            throw 0;
+        if(cres->ssl != nullptr){
+            if((lost = SSL_write(cres->ssl, out, std::strlen(out))) < 0){
+                PLOG(ERROR) << "SSL_write failed tlswserver";
+                throw 0;
+            }else if(lost == 0){
+                LOG(INFO) << "Client disconnected, could not send message";
+                throw 0;
+            }
+        }else{
+            if((lost = send(cres->sock, out, std::strlen(out), 0)) < 0){
+                PLOG(ERROR) << "SSL_write failed tlswserver";
+                throw 0;
+            }else if(lost == 0){
+                LOG(INFO) << "Client disconnected, could not send message";
+                throw 0;
+            }
         }
     }
 
     void
-    Server::sendMessage(SSL* ssl, std::string out)
+    Server::sendMessage(clientcresidentials *cres, std::string out)
     {
         const char* newout = out.c_str();
-        int lost = 0;
-        if((lost = SSL_write(ssl, newout, std::strlen(newout))) < 0){
-            PLOG(ERROR) << "SSL_write failed tlswserver";
-            throw 0;
-        }else if(lost == 0){
-            LOG(INFO) << "Client disconnected, could not send message";
-            throw 0;
-        }
+        int lost           = 0;
+        if(cres->ssl != nullptr){
+            if((lost = SSL_write(cres->ssl, newout, std::strlen(newout))) < 0){
+                PLOG(ERROR) << "SSL_write failed tlswserver";
+                throw 0;
+            }else if(lost == 0){
+                LOG(INFO) << "Client disconnected, could not send message";
+                throw 0;
+            }
+        }else{
+            if((lost = send(cres->sock, newout, std::strlen(newout),0)) < 0){
+                PLOG(ERROR) << "SSL_write failed tlswserver";
+                throw 0;
+            }else if(lost == 0){
+                LOG(INFO) << "Client disconnected, could not send message";
+                throw 0;
+            }
+        };
     }
 
     void
@@ -229,11 +259,6 @@ namespace tlsw{
             Creates the main socket
         */
 
-        if(!configured){
-            createContext();
-            configureContext();
-        }
-            
         struct sockaddr_in addr;
         addr.sin_family      = AF_INET;
         addr.sin_port        = htons(port);
@@ -374,9 +399,11 @@ namespace tlsw{
         //Setup Logger
         FLAGS_log_dir = filepath;
         google::InitGoogleLogging("serverlog");
-        initSSL();
-        createContext();
-        configureContext();
+        if(tls){
+            initSSL();
+            createContext();
+            configureContext();
+        }
         createSocket();
     }
 
@@ -431,7 +458,7 @@ namespace tlsw{
 
         while(1){
             struct sockaddr_in addr;
-            SSL  *ssl;
+            SSL  *ssl = nullptr;
             uint len  = sizeof(addr);
 
             int client = accept(sock, (struct sockaddr*)&addr,
@@ -441,17 +468,22 @@ namespace tlsw{
                 exit(EXIT_FAILURE);
             }
 
-            ssl = SSL_new(ctx);
-            SSL_set_fd(ssl, client);
-            if(SSL_accept(ssl) <= 0){
-                ERR_print_errors_fp(stderr);
+            if(tls){
+                ssl = SSL_new(ctx);
+                SSL_set_fd(ssl, client);
+                if(SSL_accept(ssl) <= 0){
+                    ERR_print_errors_fp(stderr);
+                }
+            
+                if(!verifyPeer(ssl))
+                    LOG(ERROR) << "Verifying ssl failed tlswserver";
+                    continue;
             }
             
-            if(!verifyPeer(ssl))
-                LOG(ERROR) << "Verifying ssl failed tlswserver";
-                continue;
-
-            checkUpdate(ssl);
+            clientcresidentials cres;
+            cres.ssl  = ssl;
+            cres.sock = client;
+            checkUpdate(&cres);
         
             //uses status for easier lock() functionality
             numconnmtx.lock();
@@ -466,7 +498,7 @@ namespace tlsw{
 
             //NEEDS TO CHECK IF THREAD IS STILL RUNNING, needs to send client as well
             LOG(INFO) << "Starting new client connections";
-            threads[numconnections] = std::thread(&Server::threadFunction,this,ssl,client);
+            threads[numconnections] = std::thread(&Server::threadFunction,this,cres);
             threads[numconnections].detach();
 
             numconnmtx.lock();
@@ -477,7 +509,7 @@ namespace tlsw{
     }
 
     void
-    Server::threadFunction(SSL* ssl,int client)
+    Server::threadFunction(clientcresidentials cres)
     {
         /*
             This function is what runs the while loop for each individual 
@@ -492,17 +524,16 @@ namespace tlsw{
         char buff[3000] = {'\0'};
         while(1){
             try{
-                //Make sure that below is informed to developers // hashmap here?
-                recieveMessage(ssl,buff);
+                recieveMessage(&cres,buff);
                 LOG(INFO) << "Got message: " << buff;
 
                 if(strcmp(buff,"x001") == 0)
-                    sendFile(ssl);
+                    sendFile(&cres);
 
                 //check our flags
                 for(auto &i : calls)
                     if(strcmp(buff,i.first) == 0){
-                        i.second((void*)ssl);
+                        i.second((void*)&cres);
                         memset(buff,'\0',3000);
                         continue;
                     }
@@ -510,15 +541,16 @@ namespace tlsw{
                 memset(buff,'\0',3000);
 
                 if(funcset)
-                    func((void*)ssl);
+                    func((void*)&cres);
 
             } catch (int threadstatus) {
                 numconnmtx.lock();
                 numconnections--;
                 LOG(INFO) << "Number of connections is now " << numconnections;
                 numconnmtx.unlock();
-                SSL_free(ssl);
-                close(client);
+                if(tls)
+                    SSL_free(cres.ssl);
+                close(cres.sock);
                 return;
             }
         }
@@ -559,7 +591,7 @@ namespace tlsw{
     }
 
     void
-    Server::sendFile(SSL* ssl)
+    Server::sendFile(clientcresidentials *cres)
     {
         /*
             Gets the filename that is desired and then
@@ -571,7 +603,7 @@ namespace tlsw{
         */
 
         char filename[2048] = {'\0'};
-        recieveMessage(ssl,filename);
+        recieveMessage(cres,filename);
         LOG(INFO) << "Sending file " << filename;
         
 
@@ -598,14 +630,14 @@ namespace tlsw{
         fread(string, fsize, 1, f);
         fclose(f);
 
-        sendMessage(ssl, fsizec);
-        sendMessage(ssl, string);
+        sendMessage(cres, fsizec);
+        sendMessage(cres, string);
         free(string);
         free(path);
     }
 
     void
-    Server::getFile(SSL* ssl, char* filename)
+    Server::getFile(clientcresidentials* cres, char* filename)
     {
         /*
             Sends a file to the given ssl connection.
@@ -618,7 +650,7 @@ namespace tlsw{
 
         LOG(INFO) << "Sending file: " << filename;
 
-        sendMessage(ssl,filename);
+        sendMessage(cres,filename);
 
         FILE* fp;
         int   bytesrecieved  = 0;
@@ -635,7 +667,7 @@ namespace tlsw{
         }
 
         //Get Filesize
-        recieveMessage(ssl,buffer);
+        recieveMessage(cres,buffer);
         bytesrecieved = std::atoi(buffer);
         left          = bytesrecieved;
 
@@ -648,7 +680,7 @@ namespace tlsw{
             exit(EXIT_FAILURE); 
         }
 
-        while(((left > 0) && (len = SSL_read(ssl,buffer,256))) > 0)
+        while(((left > 0) && (len = SSL_read(cres->ssl,buffer,256))) > 0)
         {
             fwrite(buffer, sizeof(char), len, fp);
             left -= len;
@@ -661,7 +693,7 @@ namespace tlsw{
     }
 
     void
-    Server::checkUpdate(SSL* ssl)
+    Server::checkUpdate(clientcresidentials *cres)
     {
         /*
             This will check with the client for updates.
@@ -679,13 +711,13 @@ namespace tlsw{
         LOG(INFO) << "Checking for update with client";
         char vers[4] = {'\0'};
         snprintf(vers, sizeof(vers), "%f", version);
-        sendMessage(ssl,vers);
+        sendMessage(cres,vers);
 
         return;
     } 
 
     void
-    Server::turnOnTLS(bool on)
+    Server::setTLS(bool on)
     {
         tls = on;
     }
